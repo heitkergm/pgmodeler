@@ -656,9 +656,6 @@ QPointF ObjectsScene::alignPointToGrid(const QPointF &pnt)
 	int px = static_cast<int>(round(pnt.x()/static_cast<double>(grid_size))) * grid_size,
 			py = static_cast<int>(round(pnt.y()/static_cast<double>(grid_size))) * grid_size;
 
-	if(px < 0) px = 0;
-	if(py < 0) py = 0;
-
 	return QPointF(px,	py);
 }
 
@@ -672,7 +669,7 @@ void ObjectsScene::setSceneRect(const QRectF &rect)
 	if(sz.height() < MinSceneHeight)
 		sz.setHeight(MinSceneHeight);
 
-	QGraphicsScene::setSceneRect(0, 0, sz.width(), sz.height());
+	QGraphicsScene::setSceneRect(rect.left(), rect.top(), sz.width(), sz.height());
 }
 
 QRectF ObjectsScene::itemsBoundingRect(bool seek_only_db_objs, bool selected_only, bool incl_layer_rects)
@@ -745,8 +742,8 @@ void ObjectsScene::drawBackground(QPainter *painter, const QRectF &rect)
 	painter->setRenderHint(QPainter::Antialiasing, false);
 	painter->setRenderHint(QPainter::TextAntialiasing, false);
 
-	start_x = (round(rect.left()/grid_size) * grid_size) - grid_size;
-	start_y = (round(rect.top()/grid_size) * grid_size) - grid_size;
+	start_x = (round(rect.left()/grid_size) * grid_size) /*- grid_size */;
+	start_y = (round(rect.top()/grid_size) * grid_size) /*- grid_size*/;
 	end_x = rect.right() < scene_w ? rect.right() : scene_w;
 	end_y = rect.bottom() < scene_h ? rect.bottom() : scene_h;
 
@@ -793,9 +790,29 @@ void ObjectsScene::drawBackground(QPainter *painter, const QRectF &rect)
 		pen.setDashPattern({3, 5});
 		painter->setPen(pen);
 
-		for(int px = 0; px < end_x; px += page_w)
+		double st_x = start_x, st_y = start_y;
+
+		/* If the current origin point of the canvas is not at the positive origin (0,0)
+		 * we need to calculate the number of page delimiter to be drawn before the (0,0).
+		 * This avoid the delimiters to be shifted every time the canvas origin moves
+		 * far to a negative point. */
+		if(start_x < 0 || start_y < 0)
 		{
-			for(int py = 0; py < end_y; py += page_h)
+			/* Due to the infinite canvas feature, we need to calculate
+			 * the number of pages before origin (0,0) so the iteration
+			 * can start in the right position of rendering */
+			st_x = round((start_x/page_w)) * page_w,
+			st_y = round((start_y/page_h)) * page_h;
+
+			/* We decremente in one page the start rendering position
+			 * so the round operation above doesn't cut any start page */
+			st_x -= page_w;
+			st_y -= page_h;
+		}
+
+		for(int px = st_x; px < end_x; px += page_w)
+		{
+			for(int py = st_y; py < end_y; py += page_h)
 			{
 				painter->drawLine(px + page_w, py, px + page_w, py + page_h);
 				painter->drawLine(px, py + page_h, px + page_w, py + page_h);
@@ -809,8 +826,8 @@ void ObjectsScene::drawBackground(QPainter *painter, const QRectF &rect)
 		pen.setColor(QColor(255, 0, 0));
 		pen.setStyle(Qt::SolidLine);
 		painter->setPen(pen);
-		painter->drawLine(0, scene_lim_y, scene_lim_x, scene_lim_y);
-		painter->drawLine(scene_lim_x, 0, scene_lim_x, scene_lim_y);
+		painter->drawLine(start_x, scene_lim_y, scene_lim_x, scene_lim_y);
+		painter->drawLine(scene_lim_x, start_y, scene_lim_x, scene_lim_y);
 	}
 
 	painter->restore();
@@ -1455,6 +1472,7 @@ void ObjectsScene::finishObjectsMove(const QPointF &pnt_end)
 	BaseTableView *tab_view=nullptr;
 	TableObjectView *tab_obj_view=nullptr;
 	QSet<BaseObjectView *> tables;
+	QRectF sel_rect;
 
 	//Gathering the relationships inside the selected schemsa in order to move their points too
 	for(auto &item : items)
@@ -1509,8 +1527,8 @@ void ObjectsScene::finishObjectsMove(const QPointF &pnt_end)
 	for(auto &item : items)
 	{
 		// Ignoring table objects items
-		tab_obj_view = dynamic_cast<TableObjectView *>(item);
-		if(tab_obj_view) continue;
+		if(dynamic_cast<TableObjectView *>(item))
+			continue;
 
 		rel=dynamic_cast<RelationshipView *>(item);
 
@@ -1518,13 +1536,11 @@ void ObjectsScene::finishObjectsMove(const QPointF &pnt_end)
 		{
 			if(align_objs_grid)
 				item->setPos(alignPointToGrid(item->pos()));
-			else
-			{
-				QPointF p=item->pos();
-				if(p.x() < 0) p.setX(0);
-				if(p.y() < 0) p.setY(0);
-				item->setPos(p);
-			}
+
+			/* Storing the object's bounding rect (with position) so we can
+			 * request that the viewport adjust the current position to make
+			 * the selection visible */
+			sel_rect = sel_rect.united(QRectF(item->pos(), item->boundingRect().size()));
 		}
 		else
 		{
@@ -1552,6 +1568,11 @@ void ObjectsScene::finishObjectsMove(const QPointF &pnt_end)
 				rel->getUnderlyingObject()->setPoints(points);
 				rel->configureLine();
 			}
+
+			/* Storing the relationship's bounding rect so we can
+			 * request that the viewport adjust the current position to make
+			 * the selection visible */
+			sel_rect = sel_rect.united(rel->boundingRect());
 		}
 	}
 
@@ -1581,17 +1602,29 @@ void ObjectsScene::finishObjectsMove(const QPointF &pnt_end)
 
 	QRectF rect = this->itemsBoundingRect(true, false, true),
 			old_scene_rect = sceneRect();
-	rect.setTopLeft(QPointF(0,0));
-	rect.setWidth(rect.width() + (2 * grid_size));
-	rect.setHeight(rect.height() + (2 * grid_size));
+
+	rect.setLeft(rect.left() - grid_size);
+	rect.setTop(rect.top() - grid_size);
+	rect.setWidth(rect.width() + grid_size);
+	rect.setHeight(rect.height() + grid_size);
+
+	if(rect.left() > 0)
+		rect.setLeft(0);
+
+	if(rect.top() > 0)
+		rect.setTop(0);
 
 	setSceneRect(rect);
 
 	/* We invalidate the entire scene if the old scene size differs from the new one
 	 * calculated based upon the items bounding rects after objects movement */
-	if(old_scene_rect.height() != rect.height() ||
+	if(old_scene_rect.topLeft() != rect.topLeft() ||
+		 old_scene_rect.height() != rect.height() ||
 		 old_scene_rect.width() != rect.width())
+	{
 		invalidate();
+		emit s_ensureVisibleRequested(sel_rect);
+	}
 
 	emit s_objectsMoved(true);
 }
@@ -1604,25 +1637,25 @@ void ObjectsScene::alignObjectsToGrid()
 	TextboxView *lab=nullptr;
 	std::vector<QPointF> points;
 	std::vector<Schema *> schemas;
-	unsigned i, count, i1, count1;
+	unsigned i1, count1;
 
-	count=items.size();
-	for(i=0; i < count; i++)
+	for(auto &item : items)
 	{
-		if(dynamic_cast<QGraphicsItemGroup *>(items[i]) && !items[i]->parentItem())
+		if(dynamic_cast<QGraphicsItemGroup *>(item) && !item->parentItem())
 		{
-			tab=dynamic_cast<BaseTableView *>(items[i]);
-			rel=dynamic_cast<RelationshipView *>(items[i]);
+			tab = dynamic_cast<BaseTableView *>(item);
+			rel = dynamic_cast<RelationshipView *>(item);
 
 			if(tab)
 				tab->setPos(this->alignPointToGrid(tab->pos()));
 			else if(rel)
 			{
 				//Align the relationship points
-				points=rel->getUnderlyingObject()->getPoints();
-				count1=points.size();
-				for(i1=0; i1 < count1; i1++)
-					points[i1]=this->alignPointToGrid(points[i1]);
+				points = rel->getUnderlyingObject()->getPoints();
+				count1 = points.size();
+
+				for(i1 = 0; i1 < count1; i1++)
+					points[i1] = this->alignPointToGrid(points[i1]);
 
 				if(count1 > 0)
 				{
@@ -1631,17 +1664,18 @@ void ObjectsScene::alignObjectsToGrid()
 				}
 
 				//Align the labels
-				for(i1=BaseRelationship::SrcCardLabel; i1 <= BaseRelationship::RelNameLabel; i1++)
+				for(i1 = BaseRelationship::SrcCardLabel; i1 <= BaseRelationship::RelNameLabel; i1++)
 				{
-					lab=rel->getLabel(static_cast<BaseRelationship::LabelId>(i1));
+					lab = rel->getLabel(static_cast<BaseRelationship::LabelId>(i1));
+
 					if(lab)
 						lab->setPos(this->alignPointToGrid(lab->pos()));
 				}
 			}
-			else if(!dynamic_cast<SchemaView *>(items[i]))
-				items[i]->setPos(this->alignPointToGrid(items[i]->pos()));
+			else if(!dynamic_cast<SchemaView *>(item))
+				item->setPos(this->alignPointToGrid(item->pos()));
 			else
-				schemas.push_back(dynamic_cast<Schema *>(dynamic_cast<BaseObjectView *>(items[i])->getUnderlyingObject()));
+				schemas.push_back(dynamic_cast<Schema *>(dynamic_cast<BaseObjectView *>(item)->getUnderlyingObject()));
 		}
 	}
 
@@ -1677,9 +1711,10 @@ void ObjectsScene::clearSelection()
 QList<QRectF> ObjectsScene::getPagesForPrinting(const QPageLayout &page_lt, unsigned &h_page_cnt, unsigned &v_page_cnt, double scale)
 {
 	QList<QRectF> pages;
-	QRectF page_rect, max_rect;
+	QRectF page_rect, max_rect, scn_rect = sceneRect();
 	double width = 0, height = 0, page_width = 0, page_height = 0;
-	unsigned h_page=0, v_page=0, start_h=99999, start_v=99999;
+	int h_page = 0, v_page = 0, start_h = 999999, start_v = 999999,
+			st_x = scn_rect.toRect().left(), st_y = scn_rect.toRect().top();
 	QList<QGraphicsItem *> list;
 
 	if(scale < MinScaleFactor)
@@ -1693,27 +1728,42 @@ QList<QRectF> ObjectsScene::getPagesForPrinting(const QPageLayout &page_lt, unsi
 	page_height = page_lt.paintRect(QPageLayout::Point).height();
 	page_height /= scale;
 
+	/* If the origin point is before (0,0) we have to calculate the number
+	 * pages are before that coordinate */
+	if(st_x < 0 || st_y < 0)
+	{
+		st_x = round(scn_rect.left() / page_width),
+		st_y = round(scn_rect.top() / page_height);
+	}
+
 	//Calculates the horizontal and vertical page count based upon the passed paper size
-	h_page_cnt=round(this->sceneRect().width()/page_width) + 1;
-	v_page_cnt=round(this->sceneRect().height()/page_height) + 1;
+	h_page_cnt = round(scn_rect.width() / page_width) + 1;
+	v_page_cnt = round(scn_rect.height() / page_height) + 1;
 
 	//Calculates the maximum count of horizontal and vertical pages
-	for(v_page=0; v_page < v_page_cnt; v_page++)
+	for(v_page = st_y; v_page < static_cast<int>(v_page_cnt); v_page++)
 	{
-		for(h_page=0; h_page < h_page_cnt; h_page++)
+		for(h_page = st_x; h_page < static_cast<int>(h_page_cnt); h_page++)
 		{
 			//Calculates the current page rectangle
-			page_rect=QRectF(QPointF(h_page * page_width, v_page * page_height), QSizeF(page_width, page_height));
+			page_rect = QRectF(QPointF(h_page * page_width, v_page * page_height),
+													QSizeF(page_width, page_height));
 
-			//Case there is selected items recalculates the maximum page size
-			list=this->items(page_rect, Qt::IntersectsItemShape);
+			/* Case there are items in which intersects the current page boundaries
+			 * recalculates the maximum page size. This is used to discard empty pages
+			 * at the border of the canvas */
+			list = this->items(page_rect, Qt::IntersectsItemShape);
+
 			if(!list.isEmpty())
 			{
-				if(start_h > h_page) start_h=h_page;
-				if(start_v > v_page) start_v=v_page;
+				if(start_h > h_page)
+					start_h = h_page;
 
-				width=page_rect.left() + page_rect.width();
-				height=page_rect.top() + page_rect.height();
+				if(start_v > v_page)
+					start_v = v_page;
+
+				width = page_rect.left() + page_rect.width();
+				height = page_rect.top() + page_rect.height();
 
 				if(width > max_rect.width())
 					max_rect.setWidth(width);
@@ -1725,12 +1775,12 @@ QList<QRectF> ObjectsScene::getPagesForPrinting(const QPageLayout &page_lt, unsi
 	}
 
 	//Re calculates the maximum page count based upon the maximum page size
-	h_page_cnt=round(max_rect.width()/page_width);
-	v_page_cnt=round(max_rect.height()/page_height);
+	h_page_cnt = round(max_rect.width()/page_width);
+	v_page_cnt = round(max_rect.height()/page_height);
 
 	//Inserts the page rectangles on the list
-	for(v_page=static_cast<unsigned>(start_v); v_page < v_page_cnt; v_page++)
-		for(h_page=static_cast<unsigned>(start_h); h_page < h_page_cnt; h_page++)
+	for(v_page = start_v; v_page < static_cast<int>(v_page_cnt); v_page++)
+		for(h_page = start_h; h_page < static_cast<int>(h_page_cnt); h_page++)
 			pages.append(QRectF(QPointF(h_page * page_width, v_page * page_height), QSizeF(page_width, page_height)));
 
 	return pages;
