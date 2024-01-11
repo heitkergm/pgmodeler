@@ -188,6 +188,10 @@ class __libcanvas ObjectsScene: public QGraphicsScene {
 		 * The parameter reset_objs_layers is used to define if the objects should be moved to the default layer or not. */
 		void removeLayers(bool reset_obj_layers);
 
+		/*! \brief Adjusts the current scene rectangle based upon the items bounding rect.
+		 *  The method returns the new scene rectangle. */
+		QRectF adjustSceneRect();
+
 	public:
 		enum LayerAttrColor: unsigned {
 			LayerNameColor,
@@ -324,8 +328,9 @@ class __libcanvas ObjectsScene: public QGraphicsScene {
 		QList<QRectF> getPagesForPrinting(const QPageLayout &page_lt, unsigned &h_page_cnt, unsigned &v_page_cnt, double scale);
 
 		/*! \brief Returns a vector containing all the page rects considering the current scene's page layout settings
-		 * A scale factor can be provided so the method returns the amount of pages in a certain zoom factor (scale) */
-		QList<QRectF> getPagesForPrinting(unsigned &h_page_cnt, unsigned &v_page_cnt, double scale);
+		 * This version always uses scale = 1. If the user need to apply a scale in the pages, it must be done in the viewport
+		 * attached to the scene */
+		QList<QRectF> getPagesForPrinting(unsigned &h_page_cnt, unsigned &v_page_cnt);
 
 		bool isRangeSelectionEnabled();
 		bool isRangeSelectionTriggerInverted();

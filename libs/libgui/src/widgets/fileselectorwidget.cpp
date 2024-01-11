@@ -131,6 +131,7 @@ void FileSelectorWidget::setCheckExecutionFlag(bool value)
 void FileSelectorWidget::setFileIsMandatory(bool value)
 {
 	file_is_mandatory = value;
+	validateSelectedFile();
 }
 
 void FileSelectorWidget::setFileMustExist(bool value)
@@ -166,14 +167,30 @@ void FileSelectorWidget::setDefaultSuffix(const QString &suffix)
 	file_dlg.setDefaultSuffix(suffix);
 }
 
+void FileSelectorWidget::setAppendSuffix(bool append)
+{
+	append_suffix = append;
+}
+
 bool FileSelectorWidget::hasWarning()
 {
-	QString str = warn_ico_lbl->toolTip();
 	return !warn_ico_lbl->toolTip().isEmpty();
 }
 
 QString FileSelectorWidget::getSelectedFile()
 {
+	if(append_suffix && allow_filename_input &&
+		 file_mode != QFileDialog::Directory &&
+		 !file_dlg.defaultSuffix().isEmpty())
+	{
+		QString filename = filename_edt->text();
+
+		if(QFileInfo(filename).completeSuffix().isEmpty())
+			filename.append("." + file_dlg.defaultSuffix());
+
+		return filename;
+	}
+
 	return filename_edt->text();
 }
 
@@ -263,12 +280,13 @@ void FileSelectorWidget::validateSelectedFile()
 	warn_ico_lbl->setToolTip("");
 	rem_file_tb->setEnabled(!filename_edt->text().isEmpty());
 
-	if(file_is_mandatory && fi.absoluteFilePath().isEmpty())
+	if((file_is_mandatory && fi.absoluteFilePath().isEmpty()) ||
+		 (!fi.absoluteFilePath().isEmpty() && !fi.isAbsolute()))
 	{
 		if(file_mode == QFileDialog::Directory)
-			warn_ico_lbl->setToolTip(tr("A path to a directory must be provided!"));
+			warn_ico_lbl->setToolTip(tr("An absolute path to a directory must be provided!"));
 		else
-			warn_ico_lbl->setToolTip(tr("A path to a file must be provided!"));
+			warn_ico_lbl->setToolTip(tr("An absolute path to a file must be provided!"));
 	}
 	else if(!fi.absoluteFilePath().isEmpty())
 	{
