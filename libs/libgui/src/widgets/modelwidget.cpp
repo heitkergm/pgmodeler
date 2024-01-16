@@ -602,13 +602,19 @@ ModelWidget::ModelWidget(QWidget *parent) : QWidget(parent)
 		viewport->ensureVisible(rect);
 	});
 
+	connect(scene, &ObjectsScene::s_sceneRectChanged, this, [this](const QRectF &rect){
+		db_model->setSceneRect(rect);
+		viewport->resetCachedContent();
+		setModified(true);
+	});
+
 	connect(scene, &ObjectsScene::s_layersChanged, this, &ModelWidget::updateModelLayersInfo);
 	connect(scene, &ObjectsScene::s_activeLayersChanged, this, &ModelWidget::updateModelLayersInfo);
 	connect(scene, qOverload<BaseObject *>(&ObjectsScene::s_popupMenuRequested), new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, qOverload<>(&ObjectsScene::s_popupMenuRequested), new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, &ObjectsScene::s_objectSelected, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, &ObjectsScene::s_childrenSelectionChanged, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
-	connect(scene, &ObjectsScene::s_objectsScenePressed, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
+	connect(scene, &ObjectsScene::s_scenePressed, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 
 	connect(&popup_menu, &QMenu::aboutToHide, this, &ModelWidget::updateObjectsLayers);
 
@@ -1777,7 +1783,7 @@ void ModelWidget::setPluginActions(const QList<QAction *> &plugin_acts)
 	plugins_actions = plugin_acts;
 }
 
-void ModelWidget::adjustSceneRect(bool use_model_rect)
+void ModelWidget::adjustSceneRect(bool use_model_rect, bool expand_only)
 {
 	if(ObjectsScene::isAlignObjectsToGrid())
 	{
@@ -1790,9 +1796,11 @@ void ModelWidget::adjustSceneRect(bool use_model_rect)
 	if(use_model_rect && rect.isValid())
 		scene->setSceneRect(rect);
 	else
-		rect = scene->adjustSceneRect(false);
+		rect = scene->adjustSceneRect(expand_only);
 
 	viewport->centerOn(rect.topLeft());
+
+	setModified(true);
 
 	emit s_sceneInteracted(rect.size());
 }
@@ -1800,8 +1808,6 @@ void ModelWidget::adjustSceneRect(bool use_model_rect)
 void ModelWidget::expandSceneRect(ObjectsScene::ExpandDirection exp_dir)
 {
 	scene->expandSceneRect(exp_dir);
-	db_model->setSceneRect(scene->sceneRect());
-	setModified(true);
 }
 
 void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page_nums, bool resize_delims)
@@ -1870,7 +1876,7 @@ void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page
 
 			h_pg_id++;
 
-			if(h_pg_id >= h_page_cnt)
+			if(h_pg_id > h_page_cnt)
 			{
 				h_pg_id = 1;
 				v_pg_id++;
@@ -3062,7 +3068,7 @@ void ModelWidget::pasteObjects(bool duplicate_mode)
 	//Validates the relationships to reflect any modification on the tables structures and not propagated columns
 	db_model->validateRelationships();
 
-	this->adjustSceneRect(false);
+	this->adjustSceneRect(false, true);
 	task_prog_wgt.close();
 
 	//If some error occur during the process show it to the user
