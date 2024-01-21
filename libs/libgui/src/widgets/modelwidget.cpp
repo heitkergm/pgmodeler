@@ -1,7 +1,7 @@
 /*
 # PostgreSQL Database Modeler (pgModeler)
 #
-# Copyright 2006-2023 - Raphael Araújo e Silva <raphael@pgmodeler.io>
+# Copyright 2006-2024 - Raphael Araújo e Silva <raphael@pgmodeler.io>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -598,13 +598,23 @@ ModelWidget::ModelWidget(QWidget *parent) : QWidget(parent)
 		setModified(true);
 	});
 
+	connect(scene, &ObjectsScene::s_ensureVisibleRequested, this, [this](const QRectF &rect){
+		viewport->ensureVisible(rect);
+	});
+
+	connect(scene, &ObjectsScene::s_sceneRectChanged, this, [this](const QRectF &rect){
+		db_model->setSceneRect(rect);
+		viewport->resetCachedContent();
+		setModified(true);
+	});
+
 	connect(scene, &ObjectsScene::s_layersChanged, this, &ModelWidget::updateModelLayersInfo);
 	connect(scene, &ObjectsScene::s_activeLayersChanged, this, &ModelWidget::updateModelLayersInfo);
 	connect(scene, qOverload<BaseObject *>(&ObjectsScene::s_popupMenuRequested), new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, qOverload<>(&ObjectsScene::s_popupMenuRequested), new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, &ObjectsScene::s_objectSelected, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 	connect(scene, &ObjectsScene::s_childrenSelectionChanged, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
-	connect(scene, &ObjectsScene::s_objectsScenePressed, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
+	connect(scene, &ObjectsScene::s_scenePressed, new_obj_overlay_wgt, &NewObjectOverlayWidget::hide);
 
 	connect(&popup_menu, &QMenu::aboutToHide, this, &ModelWidget::updateObjectsLayers);
 
@@ -661,17 +671,6 @@ void ModelWidget::setModified(bool value)
 
 void ModelWidget::resizeEvent(QResizeEvent *)
 {
-	QRectF ret=scene->sceneRect();
-
-	//Validating the width and height of the scene, resizing if the dimension is invalid
-	if(viewport->rect().width() > ret.width())
-		ret.setWidth(viewport->rect().width());
-
-	if(viewport->rect().height() > ret.height())
-		ret.setHeight(viewport->rect().height());
-
-	scene->setSceneRect(ret);
-
 	zoom_info_lbl->move((this->width()/2) - (zoom_info_lbl->width()/2),
 											(this->height()/2)  - (zoom_info_lbl->height()/2));
 
@@ -873,7 +872,7 @@ bool ModelWidget::saveLastCanvasPosition()
 				pos.x()!=hscroll->value() || pos.y()!=vscroll->value())
 		{
 			db_model->setLastPosition(QPoint(viewport->horizontalScrollBar()->value(),
-											 viewport->verticalScrollBar()->value()));
+																			 viewport->verticalScrollBar()->value()));
 			db_model->setLastZoomFactor(this->current_zoom);
 			return true;
 		}
@@ -895,7 +894,7 @@ void ModelWidget::restoreLastCanvasPosition()
 		QScrollBar *hscroll=viewport->horizontalScrollBar(),
 				*vscroll=viewport->verticalScrollBar();
 
-		if(db_model->getLastZoomFactor()!=1.0)
+		if(db_model->getLastZoomFactor() != 1.0)
 			this->applyZoom(db_model->getLastZoomFactor());
 
 		hscroll->setValue(db_model->getLastPosition().x());
@@ -960,7 +959,7 @@ void ModelWidget::handleObjectAddition(BaseObject *object)
 				if(!graph_obj->isSystemObject() ||
 						(graph_obj->isSystemObject() && graph_obj->getName()=="public"))
 				{
-					item=new SchemaView(dynamic_cast<Schema *>(graph_obj));
+					item = new SchemaView(dynamic_cast<Schema *>(graph_obj));
 				}
 			break;
 
@@ -1739,10 +1738,10 @@ void ModelWidget::loadModel(const QString &filename)
 		#endif
 
 		db_model->loadModel(filename);
-		this->filename=filename;
+		this->filename = filename;
 		updateObjectsOpacity();
 		updateSceneLayers();
-		adjustSceneSize();
+		adjustSceneRect(true);
 
 		task_prog_wgt.close();
 		protected_model_frm->setVisible(db_model->isProtected());
@@ -1784,23 +1783,31 @@ void ModelWidget::setPluginActions(const QList<QAction *> &plugin_acts)
 	plugins_actions = plugin_acts;
 }
 
-void ModelWidget::adjustSceneSize()
+void ModelWidget::adjustSceneRect(bool use_model_rect, bool expand_only)
 {
-	viewport->centerOn(0,0);
-
 	if(ObjectsScene::isAlignObjectsToGrid())
 	{
 		scene->alignObjectsToGrid();
 		db_model->setObjectsModified();
 	}
 
-	QRectF rect = scene->itemsBoundingRect();
-	rect.setTopLeft(QPointF(0,0));
-	rect.setWidth(rect.width() + (2 * ObjectsScene::getGridSize()));
-	rect.setHeight(rect.height() + (2 * ObjectsScene::getGridSize()));
-	scene->setSceneRect(rect);
+	QRectF rect = db_model->getSceneRect();
+
+	if(use_model_rect && rect.isValid())
+		scene->setSceneRect(rect);
+	else
+		rect = scene->adjustSceneRect(expand_only);
+
+	viewport->centerOn(rect.topLeft());
+
+	setModified(true);
 
 	emit s_sceneInteracted(rect.size());
+}
+
+void ModelWidget::expandSceneRect(ObjectsScene::ExpandDirection exp_dir)
+{
+	scene->expandSceneRect(exp_dir);
 }
 
 void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page_nums, bool resize_delims)
@@ -1845,7 +1852,7 @@ void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page
 	margins = printer->pageLayout().marginsPoints();
 	page_cnt = pages.size();
 
-	for(page=0, h_pg_id=1, v_pg_id=1; page < page_cnt; page++)
+	for(page = 0, h_pg_id = 1, v_pg_id = 1; page < page_cnt; page++)
 	{
 		//Render the current page on the printer
 		scene->render(&painter, QRect(), pages[page]);
@@ -1853,7 +1860,7 @@ void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page
 		//Print the current page number if this option is marked
 		if(print_page_nums)
 		{
-			page_info = tr("Page #%1 / C:%2 x R:%3").arg(QString::number(page + 1)).arg(h_pg_id).arg(v_pg_id);
+			page_info = tr("Page #%1 / X:%2 Y:%3").arg(QString::number(page + 1)).arg(h_pg_id).arg(v_pg_id);
 			color = ObjectsScene::getGridColor().darker();
 			color.setAlpha(128);
 			painter.setBrush(color);
@@ -1869,7 +1876,7 @@ void ModelWidget::printModel(QPrinter *printer, bool print_grid, bool print_page
 
 			h_pg_id++;
 
-			if(h_pg_id >= h_page_cnt)
+			if(h_pg_id > h_page_cnt)
 			{
 				h_pg_id = 1;
 				v_pg_id++;
@@ -3061,7 +3068,7 @@ void ModelWidget::pasteObjects(bool duplicate_mode)
 	//Validates the relationships to reflect any modification on the tables structures and not propagated columns
 	db_model->validateRelationships();
 
-	this->adjustSceneSize();
+	this->adjustSceneRect(false, true);
 	task_prog_wgt.close();
 
 	//If some error occur during the process show it to the user
@@ -4985,7 +4992,7 @@ void ModelWidget::rearrangeSchemasInGrid(unsigned tabs_per_row, unsigned sch_per
 																 ObjectType::BaseRelationship, ObjectType::Relationship});
 
 	//Adjust the whole scene size due to table/schema repositioning
-	this->adjustSceneSize();
+	this->adjustSceneRect(false);
 }
 
 void ModelWidget::rearrangeTablesInGrid(Schema *schema, unsigned tabs_per_row,  QPointF origin, double obj_spacing)
@@ -5261,7 +5268,7 @@ void ModelWidget::rearrangeTablesHierarchically()
 		rearrangeSchemasInGrid();
 	}
 
-	adjustSceneSize();
+	adjustSceneRect(false);
 	viewport->updateScene({ scene->sceneRect() });
 }
 
@@ -5561,7 +5568,7 @@ void ModelWidget::rearrangeTablesInSchemas()
 
 	db_model->setObjectsModified({ ObjectType::Table, ObjectType::View, ObjectType::ForeignTable,
 																 ObjectType::Schema, ObjectType::Relationship, ObjectType::BaseRelationship });
-	adjustSceneSize();
+	adjustSceneRect(false);
 	viewport->updateScene({ scene->sceneRect() });
 }
 

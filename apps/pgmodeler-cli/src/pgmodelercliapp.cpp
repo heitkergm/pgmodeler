@@ -1,7 +1,7 @@
 /*
 # PostgreSQL Database Modeler (pgModeler)
 #
-# Copyright 2006-2023 - Raphael Araújo e Silva <raphael@pgmodeler.io>
+# Copyright 2006-2024 - Raphael Araújo e Silva <raphael@pgmodeler.io>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -272,7 +272,6 @@ PgModelerCliApp::PgModelerCliApp(int argc, char **argv) : Application(argc, argv
 
 				scene=new ObjectsScene;
 				scene->setParent(this);
-				scene->setSceneRect(QRectF(0,0,2000,2000));
 			}
 
 			if(parsed_opts.count(ExportToDbms) || parsed_opts.count(ImportDb) || parsed_opts.count(Diff))
@@ -1830,6 +1829,8 @@ void PgModelerCliApp::loadModel()
 		scene->setLayerColors(ObjectsScene::LayerRectColor, model->getLayerRectColors());
 		scene->setLayerNamesVisible(model->isLayerNamesVisible());
 		scene->setLayerRectsVisible(model->isLayerRectsVisible());
+
+		scene->adjustSceneRect(true);
 		model->setObjectsModified({ ObjectType::Schema });
 
 		scene->blockSignals(false);

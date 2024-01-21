@@ -1,7 +1,7 @@
 /*
 # PostgreSQL Database Modeler (pgModeler)
 #
-# Copyright 2006-2023 - Raphael Araújo e Silva <raphael@pgmodeler.io>
+# Copyright 2006-2024 - Raphael Araújo e Silva <raphael@pgmodeler.io>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -208,8 +208,37 @@ void MainWindow::configureMenusActionsWidgets()
 	act_arrange_objs->setIcon(QIcon(GuiUtilsNs::getIconPath("arrangetables")));
 	act_arrange_objs->setEnabled(false);
 	model_acts_tb->insertAction(action_compact_view, act_arrange_objs);
-
 	tool_btn = qobject_cast<QToolButton *>(model_acts_tb->widgetForAction(act_arrange_objs));
+	tool_btn->setPopupMode(QToolButton::InstantPopup);
+
+	expand_canvas_menu.addAction(tr("Expand to top"),
+															 this, &MainWindow::expandSceneRect,
+															 QKeySequence("Ctrl+Shift+Up"))->setData(ObjectsScene::ExpandTop);
+
+	expand_canvas_menu.addAction(tr("Expand to left"),
+															this, &MainWindow::expandSceneRect,
+															QKeySequence("Ctrl+Shift+Left"))->setData(ObjectsScene::ExpandLeft);
+
+	expand_canvas_menu.addAction(tr("Expand to bottom"),
+															this, &MainWindow::expandSceneRect,
+															QKeySequence("Ctrl+Shift+Down"))->setData(ObjectsScene::ExpandBottom);
+
+	expand_canvas_menu.addAction(tr("Expand to right"),
+															this, &MainWindow::expandSceneRect,
+															QKeySequence("Ctrl+Shift+Right"))->setData(ObjectsScene::ExpandRight);
+
+	expand_canvas_menu.addSeparator();
+	expand_canvas_menu.addAction(tr("Reset geometry"),
+																this, &MainWindow::expandSceneRect,
+																QKeySequence("Ctrl+Shift+="))->setData(-1);
+
+	action_expand_canvas = expand_canvas_menu.menuAction();
+	action_expand_canvas->setEnabled(false);
+	action_expand_canvas->setText(tr("Expand canvas"));
+	action_expand_canvas->setToolTip(tr("Expand the canvas geometry to a specific direction"));
+	action_expand_canvas->setIcon(QIcon(GuiUtilsNs::getIconPath("expandcanvas")));
+	model_acts_tb->insertAction(act_arrange_objs, action_expand_canvas);
+	tool_btn = qobject_cast<QToolButton *>(model_acts_tb->widgetForAction(action_expand_canvas));
 	tool_btn->setPopupMode(QToolButton::InstantPopup);
 
 	arrange_menu.addAction(tr("Grid"), this, &MainWindow::arrangeObjects);
@@ -565,6 +594,14 @@ void MainWindow::connectSignalsToSlots()
 	connect(action_save_all, &QAction::triggered, this, &MainWindow::saveAllModels);
 	connect(oper_list_wgt, &OperationListWidget::s_operationExecuted, this, &MainWindow::updateDockWidgets);
 	connect(oper_list_wgt, &OperationListWidget::s_operationListUpdated, this, &MainWindow::__updateToolsState);
+
+	connect(oper_list_wgt, &OperationListWidget::s_operationExecuted, this, [this]() {
+		/* Everytime an operation is executed in the operation history
+		 * we have to adjust (update) the scene rect to reflect an eventual
+		 * new scene size due to the restoration of objects' positions */
+		if(current_model)
+			current_model->adjustSceneRect(false);
+	});
 
 	connect(action_undo, &QAction::triggered, oper_list_wgt, &OperationListWidget::undoOperation);
 	connect(action_redo, &QAction::triggered, oper_list_wgt, &OperationListWidget::redoOperation);
@@ -1165,7 +1202,7 @@ void MainWindow::addModel(const QString &filename)
 #ifdef DEMO_VERSION
 #warning "DEMO VERSION: database model creation limit."
 	if(models_tbw->count()==1)
-		throw Exception(tr("The demonstration version can create only `one' instance of database model!"),
+		throw Exception(tr("The demonstration version can create only `one' instance of a database model!"),
 										ErrorCode::Custom,__PRETTY_FUNCTION__,__FILE__,__LINE__);
 #endif
 
@@ -1978,7 +2015,7 @@ void MainWindow::printModel()
 				current_model->printModel(printer,
 																	conf_wgt->print_grid_chk->isChecked(),
 																	conf_wgt->print_pg_num_chk->isChecked(),
-																	true);
+																	action_lock_delim->isChecked());
 			}
 		}
 	}
@@ -2108,6 +2145,7 @@ void MainWindow::updateToolsState(bool model_closed)
 	action_redo->setEnabled(enabled);
 	action_compact_view->setEnabled(enabled);
 	action_magnifier->setEnabled(enabled && current_model->getCurrentZoom() < 1);
+	action_expand_canvas->setEnabled(enabled);
 
 	action_handle_metadata->setEnabled(enabled);
 
@@ -2526,6 +2564,20 @@ void MainWindow::toggleChangelogWidget(bool show)
 	layers_btn->setChecked(false);
 	layers_cfg_wgt->setVisible(false);
 	layers_btn->blockSignals(false);
+}
+
+void MainWindow::expandSceneRect()
+{
+	if(!current_model)
+		return;
+
+	QAction *act = qobject_cast<QAction *>(sender());
+	int expand_dir = act->data().toInt();
+
+	if(expand_dir < 0)
+		current_model->adjustSceneRect(false);
+	else
+		current_model->expandSceneRect(static_cast<ObjectsScene::ExpandDirection>(expand_dir));
 }
 
 void MainWindow::configureMoreActionsMenu()
