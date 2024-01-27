@@ -30,7 +30,6 @@
 #include "guiglobal.h"
 #include "xmlparser.h"
 #include "schemaparser.h"
-#include <algorithm>
 #include <QWidget>
 
 class __libgui BaseConfigWidget: public QWidget {
@@ -108,7 +107,7 @@ class __libgui BaseConfigWidget: public QWidget {
 		virtual void restoreDefaults(void)=0;
 		
 	public slots:
-		void setConfigurationChanged(bool changed=true);
+		virtual void setConfigurationChanged(bool changed = true);
 };
 
 #endif

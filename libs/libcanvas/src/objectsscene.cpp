@@ -672,9 +672,13 @@ void ObjectsScene::setSceneRect(const QRectF &rect)
 	if(sz.height() < min_scene_height)
 		sz.setHeight(min_scene_height);
 
-	QGraphicsScene::setSceneRect(rect.left(), rect.top(), sz.width(), sz.height());
+	QRectF old_rect = sceneRect(),
+			new_rect = QRectF(rect.topLeft(), sz);
 
-	emit s_sceneRectChanged(rect);
+	QGraphicsScene::setSceneRect(new_rect);
+
+	if(old_rect != new_rect)
+		emit s_sceneRectChanged(new_rect);
 }
 
 QRectF ObjectsScene::itemsBoundingRect(bool seek_only_db_objs, bool selected_only, bool incl_layer_rects)
@@ -744,6 +748,8 @@ void ObjectsScene::drawBackground(QPainter *painter, const QRectF &rect)
 	painter->setClipRect(rect);
 	painter->setRenderHint(QPainter::Antialiasing, false);
 	painter->setRenderHint(QPainter::TextAntialiasing, false);
+
+	painter->fillRect(rect, canvas_color);
 
 	start_x = round(scn_rect.left()/grid_size) * grid_size;
 	start_y = round(scn_rect.top()/grid_size) * grid_size;
