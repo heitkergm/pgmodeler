@@ -1067,16 +1067,16 @@ void MainWindow::updateConnections(bool force)
 			dynamic_cast<ConnectionsConfigWidget *>(configuration_form->getConfigurationWidget(ConfigurationForm::ConnectionsConfWgt));
 
 	if(force || (!force && (conn_cfg_wgt->isConfigurationChanged() ||
-							model_valid_wgt->connections_cmb->count()==0 ||
-							sql_tool_wgt->connections_cmb->count()==0)))
+													model_valid_wgt->connections_cmb->count() == 0 ||
+													sql_tool_wgt->connections_cmb->count() == 0)))
 	{
-		if(sender()!=sql_tool_wgt)
+		if(sender() != sql_tool_wgt)
 		{
 			ConnectionsConfigWidget::fillConnectionsComboBox(sql_tool_wgt->connections_cmb, true);
 			sql_tool_wgt->clearDatabases();
 		}
 
-		if(sender()!=model_valid_wgt)
+		if(sender() != model_valid_wgt)
 			ConnectionsConfigWidget::fillConnectionsComboBox(model_valid_wgt->connections_cmb, true, Connection::OpValidation);
 	}
 }
@@ -1517,7 +1517,8 @@ void MainWindow::setCurrentModel()
 	changelog_wgt->setModel(current_model);
 
 	if(current_model)
-		model_objs_wgt->restoreTreeState(model_tree_states[current_model], model_tree_v_pos[current_model]);
+		model_objs_wgt->restoreTreeState(model_tree_states[current_model],
+																		 model_tree_v_pos[current_model]);
 
 	model_objs_wgt->saveTreeState(true);
 	resizeGeneralToolbarButtons();
@@ -1621,8 +1622,8 @@ void MainWindow::closeModel(int model_id)
 				(model->isModified() && msg_box.result()==QDialog::Accepted))
 		{
 			model_nav_wgt->removeModel(model_id);
-			model_tree_states.erase(model);
-			model_tree_v_pos.erase(model);
+			model_tree_states.remove(model);
+			model_tree_v_pos.remove(model);
 
 			disconnect(model, nullptr, nullptr, nullptr);
 
