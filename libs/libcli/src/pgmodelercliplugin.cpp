@@ -16,35 +16,32 @@
 # Also, you can get the complete GNU General Public License at <http://www.gnu.org/licenses/>
 */
 
-#include "application.h"
-#include <QTranslator>
-#include "schemaeditorform.h"
-#include "pgmodelerapp.h"
-#include "exception.h"
-#include "enumtype.h"
+#include "pgmodelercliplugin.h"
 
-int main(int argc, char **argv)
+PgModelerCliPlugin::PgModelerCliPlugin()
 {
-	try
+	cli_app = nullptr;
+}
+
+PgModelerCliPlugin::~PgModelerCliPlugin()
+{
+
+}
+
+bool PgModelerCliPlugin::isValidOption(const QString &opt) const
+{
+	static attribs_map short_opts = getShortOptions();
+
+	for(auto &itr : short_opts)
 	{
-		GlobalAttributes::init(argv[0], true);
-		PgModelerApp app(argc,argv);
-		QStringList args = app.arguments();
-		SchemaEditorForm syntaxchk;
-
-		app.loadTranslations(QLocale::system().name(), false);
-
-		args.pop_front();
-		syntaxchk.loadFiles(args);
-		syntaxchk.showMaximized();
-		app.exec();
-
-		return 0;
+		if(itr.first == opt)
+			return true;
 	}
-	catch(Exception &e)
-	{
-		QTextStream out(stdout);
-		out << e.getExceptionsText();
-		return enum_t(e.getErrorCode());
-	}
+
+	return false;
+}
+
+void PgModelerCliPlugin::initPlugin(PgModelerCliApp *app)
+{
+	cli_app = app;
 }

@@ -522,12 +522,12 @@ void MainWindow::loadConfigurations()
 				//Storing the file of a previous session
 				if(itr.first.contains(Attributes::File) &&
 						!itr.second[Attributes::Path].isEmpty())
-					prev_session_files.push_back(itr.second[Attributes::Path]);
+					prev_session_files.append(itr.second[Attributes::Path]);
 
 				//Creating the recent models menu
 				else if(itr.first.contains(Attributes::Recent) &&
 						!itr.second[Attributes::Path].isEmpty())
-					recent_models.push_back(itr.second[Attributes::Path]);
+					recent_models.append(itr.second[Attributes::Path]);
 			}
 		}
 	}
@@ -1136,7 +1136,10 @@ void MainWindow::updateRecentModelsMenu()
 	recent_models_menu->clear();
 	recent_models.removeDuplicates();
 
-	for(int i=0; i < recent_models.size() && i < GeneralConfigWidget::MaxRecentModels; i++)
+	while(recent_models.size() > GeneralConfigWidget::MaxRecentModels)
+		recent_models.pop_front();
+
+	for(int i = 0; i < recent_models.size(); i++)
 	{
 		act=recent_models_menu->addAction(QFileInfo(recent_models[i]).fileName(),this, &MainWindow::loadModelFromAction);
 		act->setToolTip(recent_models[i]);
@@ -1185,11 +1188,7 @@ void MainWindow::loadModelFromAction()
 			if(QFileInfo(filename).exists())
 				showFixMessage(e, filename);
 			else
-			{
-				//Messagebox msgbox;
-				//msgbox.show(e);
 				Messagebox::error(e, __PRETTY_FUNCTION__, __FILE__, __LINE__);
-			}
 		}
 	}
 }
@@ -2059,6 +2058,7 @@ void MainWindow::loadModels(const QStringList &files)
 		return;
 
 	int i = -1;
+	QStringList loaded_files;
 
 	try
 	{
@@ -2075,10 +2075,10 @@ void MainWindow::loadModels(const QStringList &files)
 			}
 
 			addModel(file);
-			recent_models.push_front(file);
+			loaded_files.append(file);
 		}
 
-		updateRecentModelsMenu();
+		registerRecentModels(loaded_files);
 		qApp->restoreOverrideCursor();
 	}
 	catch(Exception &e)
@@ -2641,6 +2641,20 @@ void MainWindow::registerRecentModel(const QString &filename)
 
 	recent_models.append(filename);
 	updateRecentModelsMenu();
+}
+
+void MainWindow::registerRecentModels(const QStringList &filenames)
+{
+	int curr_cnt = recent_models.size();
+
+	for(auto &filename : filenames)
+	{
+		if(QFileInfo::exists(filename))
+			recent_models.append(filename);
+	}
+
+	if(curr_cnt < recent_models.size())
+		updateRecentModelsMenu();
 }
 
 void MainWindow::registerRecentModelIcon(const QString &suffix, const QIcon &file_type_icon)
