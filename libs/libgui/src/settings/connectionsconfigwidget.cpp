@@ -28,6 +28,7 @@ const QString ConnectionsConfigWidget::DefaultFor("default-for-%1");
 ConnectionsConfigWidget::ConnectionsConfigWidget(QWidget * parent) : BaseConfigWidget(parent)
 {
 	Ui_ConnectionsConfigWidget::setupUi(this);
+	GuiUtilsNs::createPasswordShowAction(passwd_edt);
 
 	connect(ssl_mode_cmb, &QComboBox::currentIndexChanged, this, &ConnectionsConfigWidget::enableCertificates);
 
@@ -183,6 +184,7 @@ void ConnectionsConfigWidget::newConnection()
 	host_edt->clear();
 	port_sbp->setValue(5432);
 	passwd_edt->clear();
+	passwd_edt->clearFocus();
 	other_params_edt->clear();
 	set_role_edt->clear();
 
