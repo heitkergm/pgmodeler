@@ -34,6 +34,8 @@ DatabaseImportForm::DatabaseImportForm(QWidget *parent, Qt::WindowFlags f) : QDi
 	model_wgt=nullptr;
 	create_model=true;
 
+	pg_version_alert_frm->setVisible(false);
+
 	objs_filter_wgt = new ObjectsFilterWidget(options_tbw->widget(1));
 	QVBoxLayout *vbox = new QVBoxLayout(options_tbw->widget(1));
 	vbox->setContentsMargins(GuiUtilsNs::LtMargin,GuiUtilsNs::LtMargin,GuiUtilsNs::LtMargin,GuiUtilsNs::LtMargin);
@@ -507,11 +509,16 @@ void DatabaseImportForm::listDatabases()
 			//List the available databases using the selected connection
 			import_helper->setConnection(*conn);
 			DatabaseImportForm::listDatabases(*import_helper, database_cmb);
+
+			pg_version_alert_frm->setVisible(
+					Connection::isDbVersionIgnored() &&
+					!import_helper->getCatalog().isServerSupported());
 		}
 		else
 		{
 			database_cmb->clear();
 			buttons_wgt->setEnabled(false);
+			pg_version_alert_frm->setVisible(false);
 		}
 
 		db_objects_tw->clear();
@@ -949,6 +956,7 @@ std::vector<QTreeWidgetItem *> DatabaseImportForm::updateObjectsTree(DatabaseImp
 				group=new QTreeWidgetItem(root);
 				group->setIcon(0, QIcon(GuiUtilsNs::getIconPath(BaseObject::getSchemaName(grp_type))));
 				group->setFont(0, grp_fnt);
+				group->setText(0, BaseObject::getTypeName(grp_type) + " (0)");
 
 				//Group items does contains a zero valued id to indicate that is not a valide object
 				group->setData(ObjectId, Qt::UserRole, 0);
