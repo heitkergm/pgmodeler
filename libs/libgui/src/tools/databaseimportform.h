@@ -43,6 +43,9 @@ class __libgui DatabaseImportForm: public QDialog, public Ui::DatabaseImportForm
 		/*! \brief Indicates if the full output generated during the process should be displayed
 		 * When this attribute is true, only errors and some key info messages are displayed. */
 		static bool low_verbosity;
+
+		//! \brief Stores the scene size increment when setting imported objects position (see setObjectPosition());
+		double scene_size_incr;
 		
 		//! \brief Custom delegate used to paint html texts in output tree
 		HtmlItemDelegate *htmlitem_del;
@@ -76,7 +79,7 @@ class __libgui DatabaseImportForm: public QDialog, public Ui::DatabaseImportForm
 		void getObjectToImport(std::map<ObjectType, std::vector<unsigned>> &obj_oids, std::map<unsigned, std::vector<unsigned>> &col_oids);
 		
 		void finishImport(const QString &msg);
-		void showEvent(QShowEvent *);
+		void showEvent(QShowEvent *event);
 		void closeEvent(QCloseEvent *event);
 		void destroyModelWidget();
 		
@@ -155,6 +158,7 @@ class __libgui DatabaseImportForm: public QDialog, public Ui::DatabaseImportForm
 																											 const QString &schema="", const QString &table="");
 
 	private slots:
+		void enableImportControls(bool enable);
 		void importDatabase();
 		void listObjects();
 		void listDatabases();
