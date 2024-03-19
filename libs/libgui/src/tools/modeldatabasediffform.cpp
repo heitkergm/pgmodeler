@@ -32,7 +32,7 @@ ModelDatabaseDiffForm::ModelDatabaseDiffForm(QWidget *parent, Qt::WindowFlags fl
 	setupUi(this);
 	setWindowFlags(flags);
 
-	src_server_supported = server_supported = false;
+	src_server_supported = server_supported = true;
 	pg_version_alert_frm->setVisible(false);
 
 	dates_wgt->setVisible(false);
@@ -52,15 +52,15 @@ ModelDatabaseDiffForm::ModelDatabaseDiffForm(QWidget *parent, Qt::WindowFlags fl
 	htmlitem_del=new HtmlItemDelegate(this);
 	output_trw->setItemDelegateForColumn(0, htmlitem_del);
 
-	find_sql_wgt = new FindReplaceWidget(sqlcode_txt, find_wgt_parent);
-	find_wgt_parent->setVisible(false);
+	search_sql_wgt = new SearchReplaceWidget(sqlcode_txt, search_wgt_parent);
+	search_wgt_parent->setVisible(false);
 
-	vbox = new QVBoxLayout(find_wgt_parent);
-	vbox->addWidget(find_sql_wgt);
+	vbox = new QVBoxLayout(search_wgt_parent);
+	vbox->addWidget(search_sql_wgt);
 	vbox->setContentsMargins(0,0,0,0);
 
-	connect(find_tb, &QToolButton::toggled, find_wgt_parent, &QWidget::setVisible);
-	connect(find_sql_wgt, &FindReplaceWidget::s_hideRequested, find_tb, &QToolButton::toggle);
+	connect(search_tb, &QToolButton::toggled, search_wgt_parent, &QWidget::setVisible);
+	connect(search_sql_wgt, &SearchReplaceWidget::s_hideRequested, search_tb, &QToolButton::toggle);
 
 	file_sel = new FileSelectorWidget(this);
 	file_sel->setAllowFilenameInput(true);
@@ -269,8 +269,11 @@ void ModelDatabaseDiffForm::closeEvent(QCloseEvent *event)
 		event_loop.quit();
 }
 
-void ModelDatabaseDiffForm::showEvent(QShowEvent *)
+void ModelDatabaseDiffForm::showEvent(QShowEvent *event)
 {
+	if(event->spontaneous())
+		return;
+
 	//Doing the form configuration in the first show in order to populate the connections combo
 	if(!isThreadsRunning() && connections_cmb->count() == 0)
 	{
@@ -456,6 +459,9 @@ void ModelDatabaseDiffForm::listDatabases()
 			imp_helper.setConnection(*conn);
 			DatabaseImportForm::listDatabases(imp_helper, db_cmb);
 			(*srv_supp) = imp_helper.getCatalog().isServerSupported();
+
+			if(conn->isAutoBrowseDB())
+				db_cmb->setCurrentText(conn->getConnectionParam(Connection::ParamDbName));
 		}
 		else
 		{
@@ -1172,8 +1178,8 @@ void ModelDatabaseDiffForm::selectPreset()
 	src_model_rb->setChecked(src_model_rb->isEnabled() && conf[Attributes::CurrentModel] == Attributes::True);
 
 	src_database_rb->setChecked(!conf[Attributes::InputDatabase].isEmpty());
-	src_connections_cmb->setCurrentIndex(0);
-	src_connections_cmb->activated(0);
+	//src_connections_cmb->setCurrentIndex(0);
+	//src_connections_cmb->activated(0);
 	db_name = conf[Attributes::InputDatabase].split('@');
 
 	if(db_name.size() > 1)
@@ -1189,8 +1195,8 @@ void ModelDatabaseDiffForm::selectPreset()
 	}
 
 	// Selecting the database to compare
-	connections_cmb->setCurrentIndex(0);
-	connections_cmb->activated(0);
+	//connections_cmb->setCurrentIndex(0);
+	//connections_cmb->activated(0);
 	db_name = conf[Attributes::CompareToDatabase].split('@');
 
 	if(db_name.size() > 1)
