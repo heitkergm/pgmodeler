@@ -234,7 +234,7 @@ linux: {
 #	PKGCONFIG = libpq libxml-2.0
 	PKGCONFIG = libxml-2.0
 #  	PGSQL_LIB = -lpq
-  	PGSQL_LIB = /usr/lib/aarch64-linux-gnu/libpq.so.5.16
+  	PGSQL_LIB = /usr/lib/aarch64-linux-gnu/libpq.so.5.17
         PGSQL_INC = /usr/include/postgresql
         INCLUDEPATH += $$PGSQL_INC
 	XML_LIB = -lxml2
