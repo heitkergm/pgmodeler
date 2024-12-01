@@ -18,10 +18,8 @@
 
 #include "securitytype.h"
 
-QStringList SecurityType::type_names =
-{
+const QStringList SecurityType::type_names {
 	"", // Reserved for Class::Null
-
 	"SECURITY INVOKER",
 	"SECURITY DEFINER"
 };

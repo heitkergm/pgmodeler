@@ -29,7 +29,7 @@
 
 class __libcore SpatialType: public TemplateType<SpatialType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		enum VariationId: unsigned {

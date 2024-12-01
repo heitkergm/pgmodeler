@@ -18,11 +18,10 @@
 
 #include "categorytype.h"
 
-QStringList CategoryType::type_names =
-{
+const QStringList CategoryType::type_names {
 	"", // Reserved for null value
 
-	//See table 44-43 on PostgreSQL 8.4 documentation
+	//See table 44-43 on PostgreSQL documentation
 	"U", //User-defined types
 	"A", //Array types
 	"B", //Boolean types

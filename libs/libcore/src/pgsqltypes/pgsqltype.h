@@ -33,7 +33,7 @@
 
 class __libcore PgSqlType: public TemplateType<PgSqlType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 		//! \brief Offset for all PostGiS types
 		static constexpr unsigned PostGiSStart = 64,

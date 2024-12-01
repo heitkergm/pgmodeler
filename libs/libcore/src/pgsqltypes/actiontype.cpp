@@ -18,7 +18,7 @@
 
 #include "actiontype.h"
 
-QStringList ActionType::type_names =
+const QStringList ActionType::type_names
 {
 	"", // Reserved for Class::Null
 

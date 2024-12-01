@@ -34,7 +34,9 @@ class __libgui ModelsDiffHelper: public QObject {
 		Q_OBJECT
 
 		//! \brief List of attributes ignored when comparing XML code of table children objects
-		static const QStringList TableObjsIgnoredAttribs,
+		static const QStringList
+
+		TableObjsIgnoredAttribs,
 
 		//! \brief List of tags ignored when comparing XML code of roles specifically
 		RolesIgnoredTags,
@@ -55,7 +57,7 @@ class __libgui ModelsDiffHelper: public QObject {
 		bool diff_canceled,
 
 		//!brief Diff options. See OPT_??? constants
-		diff_opts[10];
+		diff_opts[9];
 
 		//! \brief Stores the count of objects to be dropped, changed or created
 		unsigned diffs_counter[4];
@@ -126,11 +128,11 @@ class __libgui ModelsDiffHelper: public QObject {
 			//! \brief Indicates if any DROP/TRUNCATE generated must be in cascade mode
 			OptCascadeMode,
 
-			//! \brief Forces the recreation of any object maked as ALTER in the output
-			OptForceRecreation,
-
 			//! \brief Recreates only objects that can't be modified using ALTER commands
 			OptRecreateUnmodifiable,
+
+			//! \brief Recreates/replace the objects that can't be modified using ALTER commands but accepts CREATE OR REPLACE
+			OptReplaceModified,
 
 			//! \brief Indicates if permissions must be preserved on database
 			OptKeepObjectPerms,

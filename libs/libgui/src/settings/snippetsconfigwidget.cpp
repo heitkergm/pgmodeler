@@ -23,7 +23,10 @@
 
 std::map<QString, attribs_map> SnippetsConfigWidget::config_params;
 
-const QRegularExpression SnippetsConfigWidget::IdFormatRegExp(QRegularExpression::anchoredPattern("^([a-z])([a-z]*|(\\d)*|(_)*)+"), QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression SnippetsConfigWidget::IdFormatRegExp {
+	QRegularExpression::anchoredPattern("^([a-z])([a-z]*|(\\d)*|(_)*)+"),
+	QRegularExpression::CaseInsensitiveOption
+};
 
 SnippetsConfigWidget::SnippetsConfigWidget(QWidget * parent) : BaseConfigWidget(parent)
 {
@@ -213,7 +216,6 @@ void SnippetsConfigWidget::fillSnippetsCombo(std::map<QString, attribs_map> &con
 
 bool SnippetsConfigWidget::isSnippetValid(attribs_map &attribs, const QString &orig_id)
 {
-	Messagebox msg_box;
 	QString snip_id=attribs.at(Attributes::Id),
 			err_msg;
 
@@ -246,7 +248,7 @@ bool SnippetsConfigWidget::isSnippetValid(attribs_map &attribs, const QString &o
 
 	if(!err_msg.isEmpty())
 	{
-		msg_box.show(err_msg, Messagebox::ErrorIcon, Messagebox::OkButton);
+		Messagebox::error(err_msg);
 		return false;
 	}
 	else

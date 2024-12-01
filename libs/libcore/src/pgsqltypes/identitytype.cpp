@@ -18,10 +18,8 @@
 
 #include "identitytype.h"
 
-QStringList IdentityType::type_names =
-{
+const QStringList IdentityType::type_names {
 	"", // Reserved for Class::Null
-
 	"ALWAYS",
 	"BY DEFAULT"
 };

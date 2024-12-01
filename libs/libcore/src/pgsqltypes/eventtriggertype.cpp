@@ -18,10 +18,8 @@
 
 #include "eventtriggertype.h"
 
-QStringList EventTriggerType::type_names =
-{
+const QStringList EventTriggerType::type_names {
 	"", // Reserved for Class::Null
-
 	"ddl_command_start",
 	"ddl_command_end",
 	"sql_drop",

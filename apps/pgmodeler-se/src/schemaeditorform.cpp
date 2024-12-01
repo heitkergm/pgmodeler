@@ -28,7 +28,7 @@
 #include "utilsns.h"
 #include "qtconnectmacros.h"
 
-const QString SchemaEditorForm::UntitledFile = QT_TR_NOOP("(untitled)");
+const QString SchemaEditorForm::UntitledFile { QT_TR_NOOP("(untitled)") };
 
 SchemaEditorForm::SchemaEditorForm(QWidget *parent) : QWidget(parent)
 {
@@ -387,8 +387,6 @@ void SchemaEditorForm::saveAll()
 		}
 		catch(Exception &e)
 		{
-			//Messagebox msgbox;
-			//msgbox.show(e);
 			Messagebox::error(e, __PRETTY_FUNCTION__, __FILE__, __LINE__);
 			break;
 		}
@@ -399,10 +397,10 @@ void SchemaEditorForm::saveAll()
 
 void SchemaEditorForm::closeAll()
 {
-	Messagebox msgbox;
-
 	if(hasModifiedEditors())
 	{
+		Messagebox msgbox;
+
 		msgbox.show(tr("There are modified files! Do you want to close them without save?"), Messagebox::ConfirmIcon, Messagebox::YesNoButtons);
 
 		if(msgbox.result() == QDialog::Rejected)
@@ -530,10 +528,11 @@ void SchemaEditorForm::addEditorTab(const QString &filename)
 void SchemaEditorForm::closeEditorTab(int idx, bool confirm_close)
 {
 	SourceEditorWidget *editor_wgt = dynamic_cast<SourceEditorWidget *>(editors_tbw->widget(idx));
-	Messagebox msgbox;
 
 	if(editor_wgt->isModified() && confirm_close)
 	{
+		Messagebox msgbox;
+
 		msgbox.show(tr("The source code was modified! Do you really want to close it without save?"), Messagebox::ConfirmIcon, Messagebox::YesNoButtons);
 
 		if(msgbox.result() == QDialog::Rejected)

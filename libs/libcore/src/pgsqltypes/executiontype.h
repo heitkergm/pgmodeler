@@ -29,7 +29,7 @@
 
 class __libcore ExecutionType: public TemplateType<ExecutionType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned Also = 1,

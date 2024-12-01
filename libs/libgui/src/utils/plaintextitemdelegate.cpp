@@ -20,9 +20,8 @@
 #include <QPlainTextEdit>
 #include <QLineEdit>
 
-int PlainTextItemDelegate::max_display_len = 500;
-
-bool PlainTextItemDelegate::txt_editor_enabled = true;
+int PlainTextItemDelegate::max_display_len {500};
+bool PlainTextItemDelegate::txt_editor_enabled {true};
 
 PlainTextItemDelegate::PlainTextItemDelegate(QObject *parent, bool read_only) : QStyledItemDelegate(parent)
 {

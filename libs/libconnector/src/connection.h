@@ -81,7 +81,7 @@ class __libconnector Connection {
 		silence_conn_err,
 
 		/*! \brief Indicates if the PostgreSQL version checking must be ignored during connection.
-		 * This flag allows connecting (poorly!) to older versions ( < 10). */
+		 * This flag allows connecting (poorly and error-prone!) to older versions ( < 10). */
 		ignore_db_version;
 
 		/*! \brief Indicates that the initial database configured in the connection can be automatically

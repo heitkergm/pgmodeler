@@ -65,12 +65,15 @@ class __libcore Sequence: public BaseObject {
 
 	public:
 		//! \brief Constants that indicates the maximum and minimum values accepted by sequence
-		static const QString //For serial sequences
+		//For serial sequences
+		static const QString
 		MaxPositiveValue,
 		MaxNegativeValue,
+
 		//For smallserial sequences
 		MaxSmallPositiveValue,
 		MaxSmallNegativeValue,
+
 		//For bigserial sequences
 		MaxBigPositiveValue,
 		MaxBigNegativeValue;
@@ -126,7 +129,7 @@ class __libcore Sequence: public BaseObject {
 
 		virtual QString getAlterCode(BaseObject *object) final;
 
-		QString getDataDictionary(const attribs_map &extra_attribs = {});
+		QString getDataDictionary(bool md_format, const attribs_map &extra_attribs = {});
 
 		virtual void updateDependencies() override;
 };

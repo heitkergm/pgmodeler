@@ -18,10 +18,8 @@
 
 #include "policycmdtype.h"
 
-QStringList PolicyCmdType::type_names =
-{
+const QStringList PolicyCmdType::type_names {
 	"", // Reserved for Class::Null
-
 	"ALL",
 	"SELECT",
 	"INSERT",

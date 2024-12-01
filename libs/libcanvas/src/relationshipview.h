@@ -52,13 +52,13 @@ class __libcanvas RelationshipView: public BaseObjectView {
 		static constexpr double ConnLineLength=20.0;
 
 		//! \brief Indicates that the relationship labels must be hidden
-		static bool hide_name_label;
+		static bool hide_name_label,
 
 		//! \brief Indicates that the relationship lines should be curved
-		static bool use_curved_lines;
+		use_curved_lines,
 
 		//! \brief Indicates that the relationship should be drawn in Crow's foot notation
-		static bool use_crows_foot;
+		use_crows_foot;
 
 		/*! \brief Specify the type of connection used by the lines. The first (classical)
 		is to connect the line to tables through their central points. The second (better semantics)
@@ -214,15 +214,18 @@ class __libcanvas RelationshipView: public BaseObjectView {
 		 line connection mode used.	*/
 		QPointF getConnectionPoint(BaseRelationship::TableId table_idx);
 
+		//! \brief Returns the label through its index
+		TextboxView *getLabel(BaseRelationship::LabelId lab_idx);
+
+		//! \brief Returns the current visibility state of the tables in that are linked by the relationship
+		bool isTableVisible(BaseRelationship::TableId table_idx);
+
 		void configureObjectShadow(void) = delete;
 		void configureObjectSelection(void) = delete;
 
 	public slots:
 		//! \brief Configures the relationship line
 		void configureLine();
-
-		//! \brief Returns the label through its index
-		TextboxView *getLabel(BaseRelationship::LabelId lab_idx);
 
 	private slots:
 		//! \brief Makes the comple relationship configuration

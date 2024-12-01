@@ -29,7 +29,7 @@
 
 class __libcore ActionType: public TemplateType<ActionType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned NoAction = 1,

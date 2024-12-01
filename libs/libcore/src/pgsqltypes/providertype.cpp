@@ -18,10 +18,8 @@
 
 #include "providertype.h"
 
-QStringList ProviderType::type_names =
-{
+const QStringList ProviderType::type_names {
 	"", // Reserved for Class::Null
-
 	"libc",
 	"icu"
 };

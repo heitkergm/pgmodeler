@@ -18,10 +18,8 @@
 
 #include "constrainttype.h"
 
-QStringList ConstraintType::type_names =
-{
+const QStringList ConstraintType::type_names {
 	"", // Reserved for Class::Null
-
 	"PRIMARY KEY",
 	"FOREIGN KEY",
 	"CHECK",

@@ -18,16 +18,15 @@
 
 #include "eventtype.h"
 
-QStringList EventType::type_names =
-{
+const QStringList EventType::type_names {
 	"", // Reserved for Class::Null
-
 	"ON SELECT",
 	"ON INSERT",
 	"ON DELETE",
 	"ON UPDATE",
 	"ON TRUNCATE"
 };
+
 
 EventType::EventType()
 {

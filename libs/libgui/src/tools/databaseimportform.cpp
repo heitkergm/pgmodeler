@@ -24,9 +24,8 @@
 #include "defaultlanguages.h"
 #include "settings/connectionsconfigwidget.h"
 #include "objectslistmodel.h"
-#include "schemaview.h"
 
-bool DatabaseImportForm::low_verbosity = false;
+bool DatabaseImportForm::low_verbosity {false};
 
 DatabaseImportForm::DatabaseImportForm(QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f)
 {
@@ -130,7 +129,7 @@ DatabaseImportForm::DatabaseImportForm(QWidget *parent, Qt::WindowFlags f) : QDi
 	});
 
 #ifdef DEMO_VERSION
-	#warning "DEMO VERSION: forcing ignore errors in reverse engineering due to the object count limit."
+	#warning "DEMO VERSION: forcing ignore errors in reverse engineering."
 	ignore_errors_chk->setChecked(true);
 	ignore_errors_chk->setEnabled(false);
 #endif
@@ -304,13 +303,13 @@ void DatabaseImportForm::importDatabase()
 {
 	try
 	{
-		Messagebox msg_box;
-
 		std::map<ObjectType, std::vector<unsigned>> obj_oids;
 		std::map<unsigned, std::vector<unsigned>> col_oids;
 
 		if(import_to_model_chk->isChecked())
 		{
+			Messagebox msg_box;
+
 			msg_box.show(tr("<strong>ATTENTION:</strong> You are about to import objects to the current working model! This action will cause irreversible changes to it even in case of critical errors during the process. Do you want to proceed?"),
 						 Messagebox::AlertIcon, Messagebox::YesNoButtons);
 
@@ -731,6 +730,7 @@ void DatabaseImportForm::handleImportCanceled()
 	ico_lbl->setPixmap(ico);
 
 	GuiUtilsNs::createOutputTreeItem(output_trw, msg, ico);
+	qApp->alert(this);
 }
 
 void DatabaseImportForm::handleImportFinished(Exception e)

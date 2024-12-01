@@ -29,7 +29,7 @@
 
 class __libcore BehaviorType: public TemplateType<BehaviorType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned CalledOnNullInput = 1,

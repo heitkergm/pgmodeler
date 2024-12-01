@@ -29,7 +29,7 @@
 
 class __libcore StorageType: public TemplateType<StorageType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned Plain = 1,

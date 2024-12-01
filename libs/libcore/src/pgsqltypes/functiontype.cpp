@@ -18,9 +18,8 @@
 
 #include "functiontype.h"
 
-QStringList FunctionType::type_names = {
+const QStringList FunctionType::type_names {
 	"", // Reserved for Class::Null
-
 	"VOLATILE",
 	"STABLE",
 	"IMMUTABLE"

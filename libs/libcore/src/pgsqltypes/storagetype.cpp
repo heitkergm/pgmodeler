@@ -18,10 +18,8 @@
 
 #include "storagetype.h"
 
-QStringList StorageType::type_names =
-{
+const QStringList StorageType::type_names {
 	"", // Reserved for Class::Null
-
 	"plain",
 	"external",
 	"extended",

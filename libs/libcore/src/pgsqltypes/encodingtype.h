@@ -29,7 +29,7 @@
 
 class __libcore EncodingType: public TemplateType<EncodingType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		EncodingType();
