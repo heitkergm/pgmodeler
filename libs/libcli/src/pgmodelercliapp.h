@@ -98,15 +98,6 @@ class __libcli PgModelerCliApp: public Application {
 		//! \brief Creates an standard out to handles QStrings
 		static QTextStream out;
 
-		//! \brief Stores the long option names. The boolean indicates if the option accepts a value
-		static std::map<QString, bool> long_opts;
-
-		//! \brief Stores the short option names.
-		static attribs_map short_opts;
-
-		//! \brief Stores the accepted options by the different operations
-		static std::map<QString, QStringList> accepted_opts;
-
 		//! \brief Stores the parsed options names and values.
 		attribs_map parsed_opts;
 
@@ -191,7 +182,7 @@ class __libcli PgModelerCliApp: public Application {
 		void listConnections();
 		void loadPlugins();
 		void listPlugins();
-		bool isPluginOptsValid(const PgModelerCliPlugin *plugin);
+		bool isPluginOptsValid(PgModelerCliPlugin *plugin);
 
 		/*! \brief Determines the execution order of the plugins by reading the
 		 *  list of options provided. This method also returns the number of
@@ -211,7 +202,8 @@ class __libcli PgModelerCliApp: public Application {
 
 	public:
 		//! \brief Option names constants
-		static const QString Input,
+		static const QString AllChildren,
+		Input,
 		Output,
 		InputDb,
 		ExportToFile,
@@ -220,9 +212,17 @@ class __libcli PgModelerCliApp: public Application {
 		ExportToDbms,
 		ExportToDict,
 		ImportDb,
+		NoIndex,
+		Split,
+		Markdown,
+		DependenciesSql,
+		ChildrenSql,
+		GroupByType,
+		GenDropScript,
 		Diff,
 		DropDatabase,
 		DropObjects,
+		NonTransactional,
 		PgSqlVer,
 		Help,
 		ShowGrid,
@@ -248,23 +248,15 @@ class __libcli PgModelerCliApp: public Application {
 		Install,
 		Uninstall,
 		SystemWide,
-		NoIndex,
-		Split,
-		OriginalSql,
-		DependenciesSql,
-		ChildrenSql,
-
 		IgnoreImportErrors,
 		ImportSystemObjs,
 		ImportExtensionObjs,
 		DebugMode,
 		FilterObjects,
-		OnlyMatching,
 		MatchByName,
 		ForceChildren,
-		AllChildren,
+		OnlyMatching,
 		CommentsAsAliases,
-
 		PartialDiff,
 		Force,
 		StartDate,
@@ -280,22 +272,21 @@ class __libcli PgModelerCliApp: public Application {
 		RenameDb,
 		NoSequenceReuse,
 		NoCascadeDrop,
-		ForceRecreateObjs,
-		OnlyUnmodifiable,
-
+		RecreateUnmod,
+		ReplaceModified,
 		CreateConfigs,
 		MissingOnly,
-
 		IgnoreFaultyPlugins,
 		ListPlugins,
 
+		ConnOptions,
 		TagExpr,
 		EndTagExpr,
 		AttributeExpr,
+		ModelFixLog,
 
 		MsgFileAssociated,
-		MsgNoFileAssociation,
-		ModelFixLog;
+		MsgNoFileAssociation;
 
 		PgModelerCliApp(int argc, char **argv);
 
@@ -329,7 +320,17 @@ class __libcli PgModelerCliApp: public Application {
 		void printIgnoredError(QString err_cod, QString err_msg, QString cmd);
 		void handleObjectRemoval(BaseObject *object);
 
-		/* We main the main() a friend function of PgModelerCliApp just to
+	private:
+		//! \brief Stores the long option names. The boolean indicates if the option accepts a value
+		static std::map<QString, bool> long_opts;
+
+		//! \brief Stores the short option names.
+		static attribs_map short_opts;
+
+		//! \brief Stores the accepted options by the different operations
+		static std::map<QString, QStringList> accepted_opts;
+
+		/* We make the main() a friend function of PgModelerCliApp just to
 		 * allow it to call exec() that is a private function.
 		 *
 		 * This will avoid the exec() method to be called from within

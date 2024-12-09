@@ -24,7 +24,7 @@
 #include "settings/connectionsconfigwidget.h"
 #include "pgsqlversions.h"
 
-bool ModelDatabaseDiffForm::low_verbosity = false;
+bool ModelDatabaseDiffForm::low_verbosity {false};
 std::map<QString, attribs_map> ModelDatabaseDiffForm::config_params;
 
 ModelDatabaseDiffForm::ModelDatabaseDiffForm(QWidget *parent, Qt::WindowFlags flags) : BaseConfigWidget (parent)
@@ -124,7 +124,7 @@ ModelDatabaseDiffForm::ModelDatabaseDiffForm(QWidget *parent, Qt::WindowFlags fl
 
 	connect(close_btn, &QPushButton::clicked, this, &ModelDatabaseDiffForm::close);
 	connect(store_in_file_rb, &QRadioButton::clicked, store_in_file_wgt, &QWidget::setEnabled);
-	connect(force_recreation_chk, &QCheckBox::toggled, recreate_unmod_chk, &QCheckBox::setEnabled);
+
 	connect(dont_drop_missing_objs_chk, &QCheckBox::toggled, drop_missing_cols_constr_chk, &QCheckBox::setEnabled);
 	connect(create_tb, &QToolButton::toggled, this, &ModelDatabaseDiffForm::filterDiffInfos);
 	connect(drop_tb, &QToolButton::toggled, this, &ModelDatabaseDiffForm::filterDiffInfos);
@@ -176,15 +176,15 @@ ModelDatabaseDiffForm::ModelDatabaseDiffForm(QWidget *parent, Qt::WindowFlags fl
 	});
 
 #ifdef DEMO_VERSION
-	#warning "DEMO VERSION: forcing ignore errors in diff due to the object count limit."
+	#warning "DEMO VERSION: forcing ignore errors in diff."
 	ignore_errors_chk->setChecked(true);
 	ignore_errors_chk->setEnabled(false);
 
 	ignore_error_codes_chk->setChecked(false);
 	ignore_error_codes_chk->setEnabled(false);
 
-	apply_on_server_rb->setChecked(false);
-	apply_on_server_rb->setEnabled(false);
+	apply_on_server_btn->setEnabled(false);
+	open_in_sql_tool_btn->setEnabled(false);
 #endif
 }
 
@@ -485,6 +485,7 @@ void ModelDatabaseDiffForm::listDatabases()
 
 void ModelDatabaseDiffForm::enableDiffMode()
 {
+	export_opts_gb->setEnabled(apply_on_server_rb->isChecked());
 	store_in_file_wgt->setEnabled(store_in_file_rb->isChecked());
 	file_sel->setFileIsMandatory(store_in_file_rb->isChecked());
 
@@ -684,8 +685,8 @@ void ModelDatabaseDiffForm::diffModels()
 
 	diff_helper->setDiffOption(ModelsDiffHelper::OptKeepClusterObjs, keep_cluster_objs_chk->isChecked());
 	diff_helper->setDiffOption(ModelsDiffHelper::OptCascadeMode, cascade_mode_chk->isChecked());
-	diff_helper->setDiffOption(ModelsDiffHelper::OptForceRecreation, force_recreation_chk->isChecked());
 	diff_helper->setDiffOption(ModelsDiffHelper::OptRecreateUnmodifiable, recreate_unmod_chk->isChecked());
+	diff_helper->setDiffOption(ModelsDiffHelper::OptReplaceModified, replace_modified_chk->isChecked());
 	diff_helper->setDiffOption(ModelsDiffHelper::OptKeepObjectPerms, keep_obj_perms_chk->isChecked());
 	diff_helper->setDiffOption(ModelsDiffHelper::OptReuseSequences, reuse_sequences_chk->isChecked());
 	diff_helper->setDiffOption(ModelsDiffHelper::OptPreserveDbName, preserve_db_name_chk->isChecked());
@@ -714,11 +715,13 @@ void ModelDatabaseDiffForm::exportDiff(bool confirm)
 	Messagebox msg_box;
 
 	if(confirm)
+	{
 		msg_box.show(tr("Confirmation"),
 					 tr(" <strong>WARNING:</strong> The generated diff is ready to be exported! Once started this process will cause irreversible changes on the database. Do you really want to proceed?"),
 					 Messagebox::AlertIcon, Messagebox::AllButtons,
 					 tr("Apply diff"), tr("Preview diff"), "",
 					 GuiUtilsNs::getIconPath("diff"), GuiUtilsNs::getIconPath("sqlcode"));
+	}
 
 	if(!confirm || msg_box.result()==QDialog::Accepted)
 	{
@@ -740,7 +743,9 @@ void ModelDatabaseDiffForm::exportDiff(bool confirm)
 		export_item=GuiUtilsNs::createOutputTreeItem(output_trw, step_lbl->text(), step_ico_lbl->pixmap(Qt::ReturnByValue), nullptr);
 
 		export_helper->setExportToDBMSParams(sqlcode_txt->toPlainText(), export_conn,
-																				 database_cmb->currentText(), ignore_duplic_chk->isChecked());
+																				 database_cmb->currentText(), ignore_duplic_chk->isChecked(),
+																				 run_in_transaction_chk->isChecked());
+
 		if(ignore_error_codes_chk->isChecked())
 			export_helper->setIgnoredErrors(error_codes_edt->text().simplified().split(' '));
 
@@ -851,6 +856,8 @@ void ModelDatabaseDiffForm::finishDiff()
 	import_item=GuiUtilsNs::createOutputTreeItem(output_trw, step_lbl->text(), step_ico_lbl->pixmap(Qt::ReturnByValue), nullptr);
 	step_pb->setValue(100);
 	progress_pb->setValue(100);
+
+	qApp->alert(this);
 }
 
 void ModelDatabaseDiffForm::cancelOperation(bool cancel_by_user)
@@ -939,13 +946,12 @@ void ModelDatabaseDiffForm::handleDiffFinished()
 
 #ifdef DEMO_VERSION
 #warning "DEMO VERSION: SQL code preview truncated."
-	if(!sqlcode_txt->toPlainText().isEmpty())
-	{
-		QString code=sqlcode_txt->toPlainText();
-		code=code.mid(0, code.size()/2);
-		code+=tr("\n\n-- SQL code purposely truncated at this point in demo version!");
-		sqlcode_txt->setPlainText(code);
-	}
+	QString code = tr("/*******************************************************/\n\
+/* ATTENTION: The SQL code of the objects is purposely */\n\
+/* truncated in the demo version!                      */\n\
+/*******************************************************/\n\n") +
+	sqlcode_txt->toPlainText();
+	sqlcode_txt->setPlainText(code);
 #endif
 
 	settings_tbw->setTabEnabled(2, true);
@@ -954,7 +960,17 @@ void ModelDatabaseDiffForm::handleDiffFinished()
 	if(store_in_file_rb->isChecked())
 		saveDiffToFile();
 	else if(!sqlcode_txt->toPlainText().isEmpty())
+	{
+#ifdef DEMO_VERSION
+		#warning "DEMO VERSION: forcing code preview after diff."
+		close_btn->setEnabled(true);
+		settings_tbw->setCurrentIndex(3);
+		settings_tbw->setTabEnabled(3, true);
+		output_trw->collapseItem(diff_item);
+#else
 		exportDiff();
+#endif
+	}
 	else
 		finishDiff();
 
@@ -1038,8 +1054,13 @@ void ModelDatabaseDiffForm::updateProgress(int progress, QString msg, ObjectType
 
 		if(!low_verbosity)
 		{
-			if(obj_type==ObjectType::BaseObject)
-				ico=QPixmap(GuiUtilsNs::getIconPath("sqlcode"));
+			if(obj_type == ObjectType::BaseObject)
+			{
+				if(!cmd.isEmpty())
+					ico = QPixmap(GuiUtilsNs::getIconPath("sqlcode"));
+				else
+					ico = QPixmap(GuiUtilsNs::getIconPath("info"));
+			}
 			else
 				ico=QPixmap(GuiUtilsNs::getIconPath(obj_type));
 
@@ -1176,10 +1197,7 @@ void ModelDatabaseDiffForm::selectPreset()
 	QStringList db_name;
 
 	src_model_rb->setChecked(src_model_rb->isEnabled() && conf[Attributes::CurrentModel] == Attributes::True);
-
 	src_database_rb->setChecked(!conf[Attributes::InputDatabase].isEmpty());
-	//src_connections_cmb->setCurrentIndex(0);
-	//src_connections_cmb->activated(0);
 	db_name = conf[Attributes::InputDatabase].split('@');
 
 	if(db_name.size() > 1)
@@ -1195,8 +1213,6 @@ void ModelDatabaseDiffForm::selectPreset()
 	}
 
 	// Selecting the database to compare
-	//connections_cmb->setCurrentIndex(0);
-	//connections_cmb->activated(0);
 	db_name = conf[Attributes::CompareToDatabase].split('@');
 
 	if(db_name.size() > 1)
@@ -1227,14 +1243,14 @@ void ModelDatabaseDiffForm::selectPreset()
 	preserve_db_name_chk->setChecked(conf[Attributes::PreserveDbName] == Attributes::True);
 	cascade_mode_chk->setChecked(conf[Attributes::DropTruncCascade] == Attributes::True);
 	reuse_sequences_chk->setChecked(conf[Attributes::ReuseSequences] == Attributes::True);
-	force_recreation_chk->setChecked(conf[Attributes::ForceObjsRecreation] == Attributes::True);
-	recreate_unmod_chk->setChecked(conf[Attributes::ForceObjsRecreation] == Attributes::True &&
-																 conf[Attributes::RecreateUnmodObjs] == Attributes::True);
+	recreate_unmod_chk->setChecked(conf[Attributes::RecreateUnmodObjs] == Attributes::True);
+	replace_modified_chk->setChecked(conf[Attributes::ReplaceModObjs] == Attributes::True);
 
 	import_sys_objs_chk->setChecked(conf[Attributes::ImportSysObjs] == Attributes::True);
 	import_ext_objs_chk->setChecked(conf[Attributes::ImportExtObjs] == Attributes::True);
 	ignore_duplic_chk->setChecked(conf[Attributes::IgnoreDuplicErrors] == Attributes::True);
 	ignore_errors_chk->setChecked(conf[Attributes::IgnoreImportErrors] == Attributes::True);
+	run_in_transaction_chk->setChecked(conf[Attributes::RunInTransaction] == Attributes::True);
 	ignore_error_codes_chk->setChecked(!conf[Attributes::IgnoreErrorCodes].isEmpty());
 	error_codes_edt->setText(conf[Attributes::IgnoreErrorCodes]);
 }
@@ -1315,6 +1331,7 @@ void ModelDatabaseDiffForm::savePreset()
 	conf[Attributes::CompareToDatabase] = QString("%1@%2")
 																				.arg(database_cmb->currentIndex() > 0 ? database_cmb->currentText() : "-")
 																				.arg(connections_cmb->currentIndex() > 0 ? connections_cmb->currentText() : "-");
+
 	conf[Attributes::Version] = pgsql_ver_chk->isChecked() ? pgsql_ver_cmb->currentText() : "";
 	conf[Attributes::StoreInFile] = store_in_file_rb->isChecked() ? Attributes::True : "";
 	conf[Attributes::ApplyOnServer] = apply_on_server_rb->isChecked() ? Attributes::True : "";
@@ -1325,14 +1342,15 @@ void ModelDatabaseDiffForm::savePreset()
 	conf[Attributes::PreserveDbName] = preserve_db_name_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::DropTruncCascade] = cascade_mode_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::ReuseSequences] = reuse_sequences_chk->isChecked() ? Attributes::True : Attributes::False;
-	conf[Attributes::ForceObjsRecreation] = force_recreation_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::RecreateUnmodObjs] = recreate_unmod_chk->isChecked() ? Attributes::True : Attributes::False;
+	conf[Attributes::ReplaceModObjs] = replace_modified_chk->isChecked() ? Attributes::True : Attributes::False;
 
 	conf[Attributes::ImportSysObjs] = import_sys_objs_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::ImportExtObjs] = import_ext_objs_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::IgnoreDuplicErrors] = ignore_duplic_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::IgnoreImportErrors] = ignore_errors_chk->isChecked() ? Attributes::True : Attributes::False;
 	conf[Attributes::IgnoreErrorCodes] = error_codes_edt->text();
+	conf[Attributes::RunInTransaction] = run_in_transaction_chk->isChecked() ? Attributes::True : Attributes::False;
 
 	config_params[fmt_name] = conf;
 

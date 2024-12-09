@@ -19,19 +19,19 @@
 #include "baseobject.h"
 #include "coreutilsns.h"
 #include "exception.h"
-#include "pgsqlversions.h"
 #include <QApplication>
 
-bool BaseObject::ignore_db_version = false;
+QString BaseObject::pgsql_ver { PgSqlVersions::DefaulVersion };
 
-bool BaseObject::clear_deps_in_dtor = true;
+bool BaseObject::escape_comments {true};
+bool BaseObject::clear_deps_in_dtor {true};
+bool BaseObject::ignore_db_version {false};
 
-const QByteArray BaseObject::special_chars = QByteArray("'_-.@ $:()/<>+*\\=~!#%^&|?{}[]`;");
+unsigned BaseObject::global_id {5000};
 
-/* CAUTION: If both amount and order of the enumerations are modified
-	 then the order and amount of the elements of this vector
-	 must also be modified */
-const QString BaseObject::objs_schemas[BaseObject::ObjectTypeCount]={
+const QByteArray BaseObject::special_chars {"'_-.@ $:()/<>+*\\=~!#%^&|?{}[]`;"};
+
+const QString BaseObject::objs_schemas[ObjectTypeCount] {
 	"column",  "constraint", "function", "trigger",
 	"index", "rule", "table", "view",
 	"domain", "schema", "aggregate", "operator",
@@ -44,7 +44,20 @@ const QString BaseObject::objs_schemas[BaseObject::ObjectTypeCount]={
 	"typeattribute", "tag", "genericsql", "relationship"
 };
 
-const QString BaseObject::obj_type_names[BaseObject::ObjectTypeCount]={
+const QString BaseObject::objs_sql[ObjectTypeCount] {
+	"COLUMN", "CONSTRAINT", "FUNCTION",
+	"TRIGGER", "INDEX", "RULE", "TABLE",
+	"VIEW", "DOMAIN", "SCHEMA", "AGGREGATE",
+	"OPERATOR", "SEQUENCE", "ROLE", "CONVERSION",
+	"CAST", "LANGUAGE", "TYPE", "TABLESPACE",
+	"OPERATOR FAMILY", "OPERATOR CLASS", "DATABASE",
+	"COLLATION", "EXTENSION", "EVENT TRIGGER",
+	"POLICY", "FOREIGN DATA WRAPPER", "SERVER",
+	"FOREIGN TABLE", "USER MAPPING", "TRANSFORM",
+	"PROCEDURE"
+};
+
+const QString BaseObject::obj_type_names[ObjectTypeCount] {
 	QT_TR_NOOP("Column"), QT_TR_NOOP("Constraint"), QT_TR_NOOP("Function"),
 	QT_TR_NOOP("Trigger"), QT_TR_NOOP("Index"), QT_TR_NOOP("Rule"),
 	QT_TR_NOOP("Table"), QT_TR_NOOP("View"),  QT_TR_NOOP("Domain"),
@@ -61,28 +74,7 @@ const QString BaseObject::obj_type_names[BaseObject::ObjectTypeCount]={
 	QT_TR_NOOP("Basic Relationship")
 };
 
-const QString BaseObject::objs_sql[BaseObject::ObjectTypeCount]={
-	"COLUMN", "CONSTRAINT", "FUNCTION",
-	"TRIGGER", "INDEX", "RULE", "TABLE",
-	"VIEW", "DOMAIN", "SCHEMA", "AGGREGATE",
-	"OPERATOR", "SEQUENCE", "ROLE", "CONVERSION",
-	"CAST", "LANGUAGE", "TYPE", "TABLESPACE",
-	"OPERATOR FAMILY", "OPERATOR CLASS", "DATABASE",
-	"COLLATION", "EXTENSION", "EVENT TRIGGER",
-	"POLICY", "FOREIGN DATA WRAPPER", "SERVER",
-	"FOREIGN TABLE", "USER MAPPING", "TRANSFORM",
-	"PROCEDURE"
-};
-
-const QStringList BaseObject::search_attribs_names = {
-		Attributes::Name, Attributes::Comment, Attributes::Signature,
-		Attributes::Schema, Attributes::Owner, Attributes::Tablespace,
-		Attributes::Type, Attributes::ReturnType, Attributes::SrcTable,
-		Attributes::DstTable, Attributes::RelatedForeignKey, Attributes::SrcColumns,
-		Attributes::RefColumns
-};
-
-const attribs_map BaseObject::search_attribs_i18n = {
+const attribs_map BaseObject::search_attribs_i18n {
 	{ Attributes::Name, QT_TR_NOOP("Name") },
 	{ Attributes::Comment, QT_TR_NOOP("Comment") },
 	{ Attributes::Signature, QT_TR_NOOP("Signature") },
@@ -98,15 +90,13 @@ const attribs_map BaseObject::search_attribs_i18n = {
 	{ Attributes::RefColumns, QT_TR_NOOP("Referenced column(s)") }
 };
 
-/* Initializes the global id which is shared between instances
-	 of classes derived from the this class. The value of global_id
-	 starts at 4k because the id ranges 0, 1k, 2k, 3k, 4k
-	 are respectively assigned to objects of classes Role, Tablespace
-	 DatabaseModel, Schema, Tag */
-unsigned BaseObject::global_id=5000;
-
-QString BaseObject::pgsql_ver=PgSqlVersions::DefaulVersion;
-bool BaseObject::escape_comments=true;
+const QStringList BaseObject::search_attribs_names {
+	Attributes::Name, Attributes::Comment, Attributes::Signature,
+	Attributes::Schema, Attributes::Owner, Attributes::Tablespace,
+	Attributes::Type, Attributes::ReturnType, Attributes::SrcTable,
+	Attributes::DstTable, Attributes::RelatedForeignKey, Attributes::SrcColumns,
+	Attributes::RefColumns
+};
 
 BaseObject::BaseObject()
 {
@@ -173,20 +163,18 @@ QString BaseObject::getTypeName(const QString &type_str)
 	return getTypeName(getObjectType(type_str));
 }
 
-ObjectType BaseObject::getObjectType(const QString &type_name)
+ObjectType BaseObject::getObjectType(const QString &type_name, bool is_sql_name)
 {
-	ObjectType obj_type=ObjectType::BaseObject;
-
-	for(unsigned i=0; i < BaseObject::ObjectTypeCount; i++)
+	for(unsigned i = 0; i < BaseObject::ObjectTypeCount; i++)
 	{
-		if(objs_schemas[i]==type_name)
+		if((is_sql_name && !objs_sql[i].isEmpty() && objs_sql[i] == type_name.toUpper()) ||
+			 (!is_sql_name && objs_schemas[i] == type_name.toLower()))
 		{
-			obj_type=static_cast<ObjectType>(i);
-			break;
+			return static_cast<ObjectType>(i);
 		}
 	}
 
-	return obj_type;
+	return ObjectType::BaseObject;
 }
 
 QString BaseObject::getSchemaName(ObjectType obj_type)
@@ -537,6 +525,14 @@ bool BaseObject::acceptsDropCommand(ObjectType obj_type)
 				obj_type!=ObjectType::BaseTable);
 }
 
+bool BaseObject::acceptsReplaceCommand(ObjectType obj_type)
+{
+	return obj_type == ObjectType::Aggregate || obj_type == ObjectType::Function ||
+				 obj_type == ObjectType::Language || obj_type == ObjectType::Procedure ||
+				 obj_type == ObjectType::Rule || obj_type == ObjectType::Transform ||
+				 obj_type == ObjectType::Trigger || obj_type == ObjectType::View;
+}
+
 bool BaseObject::acceptsAlias(ObjectType obj_type)
 {
 	return (obj_type==ObjectType::Relationship || obj_type==ObjectType::BaseRelationship ||
@@ -567,6 +563,11 @@ bool BaseObject::acceptsAlterCommand()
 bool BaseObject::acceptsDropCommand()
 {
 	return BaseObject::acceptsDropCommand(this->obj_type);
+}
+
+bool BaseObject::acceptsReplaceCommand()
+{
+	return BaseObject::acceptsReplaceCommand(this->obj_type);
 }
 
 bool BaseObject::acceptsAlias()
@@ -869,12 +870,12 @@ QString BaseObject::getSourceCode(SchemaParser::CodeType def_type, bool reduced_
 		{
 			if(def_type==SchemaParser::SqlCode)
 			{
-				attributes[Attributes::Owner]=owner->getName(format);
+				attributes[Attributes::Owner] = owner->getName(format);
 
 				/* Only tablespaces, database and user mapping do not have an ALTER OWNER SET
 				 because the rule says that PostgreSQL tablespaces and database should be created
 				 with just a command line isolated from the others */
-				if(obj_type!=ObjectType::Tablespace && obj_type!=ObjectType::Database && obj_type!=ObjectType::UserMapping)
+				if(obj_type != ObjectType::Tablespace && obj_type != ObjectType::Database && obj_type != ObjectType::UserMapping)
 				{
 					SchemaParser sch_parser;
 					QString filename=GlobalAttributes::getSchemaFilePath(GlobalAttributes::AlterSchemaDir, Attributes::Owner);
@@ -1101,29 +1102,44 @@ std::vector<ObjectType> BaseObject::getObjectTypes(bool inc_table_objs, std::vec
 
 std::vector<ObjectType> BaseObject::getChildObjectTypes(ObjectType obj_type)
 {
-	if(obj_type==ObjectType::Database)
-		return std::vector<ObjectType>()={ ObjectType::Cast, ObjectType::Role, ObjectType::Language,
-																	ObjectType::Tablespace, ObjectType::Schema, ObjectType::Extension,
-																	ObjectType::EventTrigger, ObjectType::ForeignDataWrapper, ObjectType::ForeignServer,
-																	ObjectType::UserMapping, ObjectType::Transform };
+	if(obj_type == ObjectType::Database)
+	{
+		static std::vector<ObjectType> db_child { ObjectType::Cast, ObjectType::Role, ObjectType::Language,
+																							ObjectType::Tablespace, ObjectType::Schema, ObjectType::Extension,
+																							ObjectType::EventTrigger, ObjectType::ForeignDataWrapper, ObjectType::ForeignServer,
+																							ObjectType::UserMapping, ObjectType::Transform };
+		return db_child;
+	}
 
-	if(obj_type==ObjectType::Schema)
-		return std::vector<ObjectType>()={	ObjectType::Aggregate, ObjectType::Conversion, ObjectType::Collation,
-																	ObjectType::Domain, ObjectType::ForeignTable, ObjectType::Function, ObjectType::OpClass,
-																	ObjectType::Operator, ObjectType::OpFamily, ObjectType::Procedure, ObjectType::Sequence,
-																	ObjectType::Type, ObjectType::Table, ObjectType::View };
+	if(obj_type == ObjectType::Schema)
+	{
+		static std::vector<ObjectType> sch_child { ObjectType::Aggregate, ObjectType::Conversion, ObjectType::Collation,
+																							 ObjectType::Domain, ObjectType::ForeignTable, ObjectType::Function, ObjectType::OpClass,
+																							 ObjectType::Operator, ObjectType::OpFamily, ObjectType::Procedure, ObjectType::Sequence,
+																							 ObjectType::Type, ObjectType::Table, ObjectType::View };
+		return sch_child;
+	}
 
-	if(obj_type==ObjectType::Table)
-		return std::vector<ObjectType>()={	ObjectType::Column, ObjectType::Constraint, ObjectType::Rule,
-																	ObjectType::Trigger, ObjectType::Index, ObjectType::Policy };
+	if(obj_type == ObjectType::Table)
+	{
+		static std::vector<ObjectType> tb_child { ObjectType::Column, ObjectType::Constraint, ObjectType::Rule,
+																							ObjectType::Trigger, ObjectType::Index, ObjectType::Policy };
+		return tb_child;
+	}
 
-	if(obj_type==ObjectType::ForeignTable)
-		return std::vector<ObjectType>()={	ObjectType::Column, ObjectType::Constraint, ObjectType::Trigger };
+	if(obj_type == ObjectType::ForeignTable)
+	{
+		static std::vector<ObjectType> ft_child {	ObjectType::Column, ObjectType::Constraint, ObjectType::Trigger };
+		return ft_child;
+	}
 
 	if(obj_type==ObjectType::View)
-		return std::vector<ObjectType>()={ObjectType::Rule, ObjectType::Trigger, ObjectType::Index};
+	{
+		static std::vector<ObjectType> vw_child {ObjectType::Rule, ObjectType::Trigger, ObjectType::Index};
+		return vw_child;
+	}
 
-	return std::vector<ObjectType>()={};
+	return {};
 }
 
 bool BaseObject::isChildObjectType(ObjectType parent_type, ObjectType child_type)

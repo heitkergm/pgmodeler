@@ -18,7 +18,7 @@
 
 #include "behaviortype.h"
 
-QStringList BehaviorType::type_names =
+const QStringList BehaviorType::type_names
 {
 	"", // Reserved for Class::Null
 

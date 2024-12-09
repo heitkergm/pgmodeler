@@ -29,7 +29,7 @@
 
 class __libcore IntervalType: public TemplateType<IntervalType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned Year = 1,

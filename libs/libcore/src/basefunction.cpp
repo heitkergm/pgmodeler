@@ -20,8 +20,10 @@
 #include "defaultlanguages.h"
 #include "utilsns.h"
 
-const QRegularExpression BaseFunction::ConfigParamPattern(QRegularExpression::anchoredPattern("([a-z]+)([a-z]|(_))*"),
-																													QRegularExpression::CaseInsensitiveOption);
+const QRegularExpression BaseFunction::ConfigParamPattern {
+	QRegularExpression::anchoredPattern("([a-z]+)([a-z]|(_))*"),
+	QRegularExpression::CaseInsensitiveOption
+};
 
 BaseFunction::BaseFunction()
 {

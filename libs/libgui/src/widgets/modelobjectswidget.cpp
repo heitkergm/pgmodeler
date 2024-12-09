@@ -20,7 +20,7 @@
 #include "tools/databaseimportform.h"
 #include "guiutilsns.h"
 #include "settings/generalconfigwidget.h"
-#include "objectstablewidget.h"
+#include "customtablewidget.h"
 
 ModelObjectsWidget::ModelObjectsWidget(bool simplified_view, QWidget *parent) : QWidget(parent)
 {
@@ -96,8 +96,8 @@ ModelObjectsWidget::ModelObjectsWidget(bool simplified_view, QWidget *parent) : 
 		model_objs_grid->setContentsMargins(GuiUtilsNs::LtMargin, GuiUtilsNs::LtMargin,
 																				GuiUtilsNs::LtMargin, GuiUtilsNs::LtMargin);
 		setMinimumSize(250, 300);
-		setWindowModality(Qt::ApplicationModal);
 		setWindowFlags(Qt::Dialog | Qt::WindowCloseButtonHint | Qt::WindowTitleHint);
+		setWindowModality(Qt::ApplicationModal);
 		connect(objectstree_tw, &QTreeWidget::itemDoubleClicked, this, &ModelObjectsWidget::close);
 		connect(select_tb, &QToolButton::clicked, this, &ModelObjectsWidget::close);
 		connect(cancel_tb, &QToolButton::clicked, this, &ModelObjectsWidget::close);
@@ -133,6 +133,23 @@ void ModelObjectsWidget::hide()
 	emit s_visibilityChanged(false);
 }
 
+void ModelObjectsWidget::show()
+{
+	QWidget::show();
+
+	/* When in simplified view we use an event loop to block the execution in
+	 * the show event until the user takes an action in the widget that
+	 * causes its closing */
+	if(simplified_view)
+	{
+		connect(this, qOverload<BaseObject *, bool>(&ModelObjectsWidget::s_visibilityChanged), this, [this](BaseObject *, bool visible) {
+			if(!visible)
+				event_loop.quit();
+		});
+
+		event_loop.exec();
+	}
+}
 
 void ModelObjectsWidget::showObjectMenu()
 {
@@ -287,12 +304,12 @@ QTreeWidgetItem *ModelObjectsWidget::createItemForObject(BaseObject *object, QTr
 	if(tab_obj && tab_obj->isAddedByRelationship())
 	{
 		font.setItalic(true);
-		item->setForeground(0, ObjectsTableWidget::getTableItemColor(ObjectsTableWidget::RelAddedItemAltFgColor));
+		item->setForeground(0, CustomTableWidget::getTableItemColor(CustomTableWidget::RelAddedItemAltFgColor));
 	}
 	else if(object->isProtected() || object->isSystemObject())
 	{
 		font.setItalic(true);
-		item->setForeground(0, ObjectsTableWidget::getTableItemColor(ObjectsTableWidget::ProtItemAltFgColor));
+		item->setForeground(0, CustomTableWidget::getTableItemColor(CustomTableWidget::ProtItemAltFgColor));
 	}
 
 	item->setFont(0,font);

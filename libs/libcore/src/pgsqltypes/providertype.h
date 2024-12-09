@@ -29,7 +29,7 @@
 
 class __libcore ProviderType: public TemplateType<ProviderType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned 	LibC = 1,

@@ -29,7 +29,7 @@
 
 class __libcore EventTriggerType: public TemplateType<EventTriggerType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned DdlCommandStart = 1,

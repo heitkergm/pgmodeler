@@ -136,7 +136,7 @@ void BaseObjectWidget::setRequiredField(QWidget *widget)
 		ObjectSelectorWidget *sel=dynamic_cast<ObjectSelectorWidget *>(widget);
 		PgSQLTypeWidget *pgtype=dynamic_cast<PgSQLTypeWidget *>(widget);
 		QString str_aux = " <span style='color: #ff0000;'>*</span> ";
-		QColor border_color = ObjectsTableWidget::getTableItemColor(ObjectsTableWidget::RemovedItemBgColor);
+		QColor border_color = CustomTableWidget::getTableItemColor(CustomTableWidget::RemovedItemBgColor);
 
 		if(lbl || pgtype || grp)
 		{
@@ -369,7 +369,7 @@ void BaseObjectWidget::setAttributes(DatabaseModel *model, OperationList *op_lis
 		obj_type=object->getObjectType();
 		object_protected=(parent_type!=ObjectType::Relationship &&
 																	 (object->isProtected() ||
-																		((obj_type==ObjectType::Column || obj_type==ObjectType::Constraint) &&
+																		(TableObject::isTableObject(obj_type) &&
 																		 dynamic_cast<TableObject *>(object)->isAddedByRelationship())));
 		protected_obj_frm->setVisible(object_protected);
 		disable_sql_chk->setChecked(object->isSQLDisabled());

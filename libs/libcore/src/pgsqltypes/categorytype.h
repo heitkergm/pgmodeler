@@ -29,7 +29,7 @@
 
 class __libcore CategoryType: public TemplateType<CategoryType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned UserDefined = 1,

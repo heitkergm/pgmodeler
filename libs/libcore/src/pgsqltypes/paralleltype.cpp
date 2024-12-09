@@ -18,10 +18,8 @@
 
 #include "paralleltype.h"
 
-QStringList ParallelType::type_names =
-{
+const QStringList ParallelType::type_names {
 	"", // Reserved for Class::Null
-
 	"PARALLEL UNSAFE",
 	"PARALLEL RESTRICTED",
 	"PARALLEL SAFE"

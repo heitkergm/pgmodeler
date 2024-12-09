@@ -18,10 +18,8 @@
 
 #include "executiontype.h"
 
-QStringList ExecutionType::type_names =
-{
+const QStringList ExecutionType::type_names {
 	"", // Reserved for Class::Null
-
 	"ALSO",
 	"INSTEAD"
 };

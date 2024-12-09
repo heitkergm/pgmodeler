@@ -18,10 +18,8 @@
 
 #include "firingtype.h"
 
-QStringList FiringType::type_names =
-{
+const QStringList FiringType::type_names {
 	"", // Reserved for Class::Null
-
 	"BEFORE",
 	"AFTER",
 	"INSTEAD OF"

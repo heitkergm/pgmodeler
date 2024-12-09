@@ -18,10 +18,8 @@
 
 #include "partitioningtype.h"
 
-QStringList PartitioningType::type_names =
-{
+const QStringList PartitioningType::type_names {
 	"", // Reserved for Class::Null
-
 	"RANGE",
 	"LIST",
 	"HASH"

@@ -29,7 +29,7 @@
 
 class __libcore SecurityType: public TemplateType<SecurityType>{
 	private:
-		static QStringList type_names;
+		static const QStringList type_names;
 
 	public:
 		static constexpr unsigned Invoker = 1,

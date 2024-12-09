@@ -18,10 +18,8 @@
 
 #include "spatialtype.h"
 
-QStringList SpatialType::type_names =
-{
+const QStringList SpatialType::type_names {
 	"", // Reserved for Class::Null
-
 	"POINT",	"LINESTRING",
 	"POLYGON",	"MULTIPOINT",
 	"MULTILINESTRING",	"MULTIPOLYGON",

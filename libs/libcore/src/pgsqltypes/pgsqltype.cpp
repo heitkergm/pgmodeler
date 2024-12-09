@@ -20,17 +20,13 @@
 #include "attributes.h"
 #include "../baseobject.h"
 
-std::vector<UserTypeConfig> PgSqlType::user_types;
-
-QStringList PgSqlType::type_names =
-{
+const QStringList PgSqlType::type_names {
 	"", // Reserved for Class::Null
 
 	//Types used by the class PgSQLType
 	//offsets 1 to 63
 	//Note: the type char is different from "char" (with quotes)
 	//Reference: http://www.postgresql.org/docs/9.2/static/datatype-character.html
-
 	"smallint", "integer", "bigint", "decimal", "numeric",
 	"real", "double precision", "float", "serial", "bigserial", "money",
 	"character varying", "varchar", "character",  "char", "\"char\"",
@@ -80,6 +76,8 @@ QStringList PgSqlType::type_names =
 	"index_am_handler", "tsm_handler", "record", "trigger", "event_trigger",
 	"pg_ddl_command", "void", "unknown"
 };
+
+std::vector<UserTypeConfig> PgSqlType::user_types;
 
 PgSqlType::PgSqlType()
 {

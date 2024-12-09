@@ -18,10 +18,8 @@
 
 #include "matchtype.h"
 
-QStringList MatchType::type_names =
-{
+const QStringList MatchType::type_names {
 	"", // Reserved for Class::Null
-
 	"MATCH SIMPLE",
 	"MATCH FULL",
 	"MATCH PARTIAL"
