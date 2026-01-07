@@ -253,8 +253,12 @@ linux: {
   # Then we default to use pkg-config for libpq and libxml-2.0
   !defined(has_dep_paths,var): {
     CONFIG += link_pkgconfig
-	PKGCONFIG = libpq libxml-2.0
-	PGSQL_LIB = -lpq
+#	PKGCONFIG = libpq libxml-2.0
+	PKGCONFIG = libxml-2.0
+#	PGSQL_LIB = -lpq
+        PGSQL_LIB = /usr/pgsql-18/lib/libpq.so.5.18
+        PGSQL_INC = /usr/pgsql-18/include
+        INCLUDEPATH+= $$PGSQL_INC
 	XML_LIB = -lxml2
   }
 }
